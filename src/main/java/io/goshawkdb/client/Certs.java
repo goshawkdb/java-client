@@ -41,8 +41,8 @@ import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
 /**
- * Class for managing the cluster ECDSA certificate and public key, and the client ECDSA certificate and key pair. GoshawkDB only speaks TLSv1.2 on TCP, and
- * only uses ECDSA keys on P256.
+ * Class for managing the cluster ECDSA certificate and public key, and the client ECDSA certificate
+ * and key pair. GoshawkDB only speaks TLSv1.2 on TCP, and only uses ECDSA keys on P256.
  */
 public class Certs {
 
@@ -77,8 +77,12 @@ public class Certs {
     }
 
     /**
-     * Provided in case you wish to provide your own keystore (for example one that is stored on disk rather than an ephemeral one). The keystore is only used
-     * to hold the cluster certificate, and thus validate the certificate presented by the GoshawkDB node to which you connect.
+     * Provided in case you wish to provide your own keystore (for example one that is stored on
+     * disk rather than an ephemeral one). The keystore is only used to hold the cluster
+     * certificate, and thus validate the certificate presented by the GoshawkDB node to which you
+     * connect (as opposed to the client certificate and key pair. I.e. even if you set a key store,
+     * you still need to call setClientCertificateHolder and setClientKeyPair). If you supply your
+     * own KeyStore, you must have initialized it yourself.
      */
     public Certs setKeyStore(final KeyStore ks) {
         keyStore = ks;
@@ -96,8 +100,9 @@ public class Certs {
     }
 
     /**
-     * Loads a single X.509 certificate from the provided InputStream into the current KeyStore. If no KeyStore has been set, certificates will be loaded into a
-     * fresh ephemeral KeyStore. Will always close the InputStream.
+     * Loads a single X.509 certificate from the provided InputStream into the current KeyStore. If
+     * no KeyStore has been set, certificates will be loaded into a fresh ephemeral KeyStore. Will
+     * always close the InputStream.
      */
     public Certs addClusterCertificate(final String alias, final InputStream is) throws CertificateException, NoSuchAlgorithmException, KeyStoreException, IOException {
         try {
@@ -116,9 +121,10 @@ public class Certs {
     }
 
     /**
-     * Set the ClientCertificateHolder. This is the X.509 certificate the client will present to the GoshawkDB node for authentication. This certificate must
-     * contain an ECDSA P256 public key. Once the ClientCertificateHolder and the ClientKeyPair are both set, it is verified that they both contain the same
-     * public key.
+     * Set the ClientCertificateHolder. This is the X.509 certificate the client will present to the
+     * GoshawkDB node for authentication. This certificate must contain an ECDSA P256 public key.
+     * Once the ClientCertificateHolder and the ClientKeyPair are both set, it is verified that they
+     * both contain the same public key.
      */
     public Certs setClientCertificateHolder(final X509CertificateHolder certHolder) throws CertificateException, InvalidKeySpecException, InvalidKeyException, IOException {
         clientCertificateHolder = certHolder;
@@ -128,8 +134,9 @@ public class Certs {
     }
 
     /**
-     * Set the ClientKeyPair. This must be an ECDSA P256 key pair in PEM format. Once the ClientCertificateHolder and the ClientKeyPair are both set, it is
-     * verified that they both contain the same public key.
+     * Set the ClientKeyPair. This must be an ECDSA P256 key pair in PEM format. Once the
+     * ClientCertificateHolder and the ClientKeyPair are both set, it is verified that they both
+     * contain the same public key.
      */
     public Certs setClientKeyPair(final PEMKeyPair keyPair) throws CertificateException, InvalidKeySpecException, InvalidKeyException, IOException {
         clientKeyPair = keyPair;
@@ -139,9 +146,10 @@ public class Certs {
     }
 
     /**
-     * Parse the contents of the provided Reader for an X.509 Certificate and a PEM Key Pair, and calls setClientCertificateHolder and setClientKeyPair as
-     * appropriate. Only the first X.509 Certificate and the first PEM Key Pair are read, but order within the Reader does not matter. The Reader is always
-     * closed.
+     * Parse the contents of the provided Reader for an X.509 Certificate and a PEM Key Pair, and
+     * calls setClientCertificateHolder and setClientKeyPair as appropriate. Only the first X.509
+     * Certificate and the first PEM Key Pair are read, but order within the Reader does not matter.
+     * The Reader is always closed.
      */
     public Certs parseClientPEM(final Reader reader) throws IOException, CertificateException, InvalidKeySpecException, InvalidKeyException {
         clientKeyPair = null;
@@ -215,11 +223,12 @@ public class Certs {
     }
 
     /**
-     * Build's a netty SslContext for clients using the KeyStore, ClientCertificateHolder and ClientKeyPair. If a KeyStore has been set then a new
-     * TrustManagerFactory will be created using the supplied KeyStore. If ClusterCertificates have been added then a fresh ephemeral KeyStore, containing only
-     * the supplied ClusterCertificates will be used to generate a new TrustManagerFactory. If no KeyStore and no ClusterCertificate have been provided then an
-     * InsecureTrustManagerFactory will be used which will accept ANY certificate supplied by the GoshawkDB node: this is insecure - DO NOT USE THIS IN
-     * PRODUCTION. The ClientCertificateHolder and ClientKeyPair must have been set.
+     * Builds a netty SslContext for clients using the KeyStore, ClientCertificateHolder and
+     * ClientKeyPair. A new TrustManagerFactory will be created and initialised with the current
+     * KeyStore. If no KeyStore and no ClusterCertificate have been provided then an
+     * InsecureTrustManagerFactory will be used which will accept ANY certificate supplied by the
+     * GoshawkDB node: this is insecure - DO NOT USE THIS IN PRODUCTION. The ClientCertificateHolder
+     * and ClientKeyPair must have been set.
      */
     public SslContext buildClientSslContext() throws KeyStoreException, NoSuchAlgorithmException, CertificateException, SSLException {
         if (clientCertificateHolder == null || clientKeyPair == null) {
