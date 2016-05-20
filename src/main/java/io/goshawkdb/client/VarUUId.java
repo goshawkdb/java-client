@@ -7,7 +7,7 @@ import java.util.Arrays;
 public class VarUUId {
     public final byte[] id;
 
-    public VarUUId(final byte[] id) {
+    VarUUId(final byte[] id) {
         this.id = id;
     }
 

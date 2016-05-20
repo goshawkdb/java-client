@@ -8,7 +8,7 @@ import java.util.Arrays;
 public class TxnId {
     public final byte[] id;
 
-    public TxnId(final byte[] id) {
+    TxnId(final byte[] id) {
         this.id = id;
     }
 

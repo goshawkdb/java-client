@@ -81,8 +81,8 @@ public class Certs {
      * disk rather than an ephemeral one). The keystore is only used to hold the cluster
      * certificate, and thus validate the certificate presented by the GoshawkDB node to which you
      * connect (as opposed to the client certificate and key pair. I.e. even if you set a key store,
-     * you still need to call setClientCertificateHolder and setClientKeyPair). If you supply your
-     * own KeyStore, you must have initialized it yourself.
+     * you still need to call setClientCertificateHolder and setClientKeyPair, or parseClientPEM).
+     * If you supply your own KeyStore, you must have initialized it yourself.
      */
     public Certs setKeyStore(final KeyStore ks) {
         keyStore = ks;
@@ -121,8 +121,8 @@ public class Certs {
     }
 
     /**
-     * Set the ClientCertificateHolder. This is the X.509 certificate the client will present to the
-     * GoshawkDB node for authentication. This certificate must contain an ECDSA P256 public key.
+     * Set the ClientCertificateHolder. This is the X.509 certificate and public key the client will
+     * present to the GoshawkDB node for authentication. The public key must be an ECDSA P256 key.
      * Once the ClientCertificateHolder and the ClientKeyPair are both set, it is verified that they
      * both contain the same public key.
      */
@@ -146,10 +146,10 @@ public class Certs {
     }
 
     /**
-     * Parse the contents of the provided Reader for an X.509 Certificate and a PEM Key Pair, and
-     * calls setClientCertificateHolder and setClientKeyPair as appropriate. Only the first X.509
-     * Certificate and the first PEM Key Pair are read, but order within the Reader does not matter.
-     * The Reader is always closed.
+     * Parse the contents of the provided Reader for an X.509 Certificate with public key, and a PEM
+     * Key Pair, and calls setClientCertificateHolder and setClientKeyPair as appropriate. Only the
+     * first X.509 Certificate and the first PEM Key Pair are read, but order within the Reader does
+     * not matter. The Reader is always closed.
      */
     public Certs parseClientPEM(final Reader reader) throws IOException, CertificateException, InvalidKeySpecException, InvalidKeyException {
         clientKeyPair = null;
@@ -185,7 +185,7 @@ public class Certs {
             clientCertificatePubKeyInfo = clientCertificateHolder.getSubjectPublicKeyInfo();
             if (!X9ObjectIdentifiers.id_ecPublicKey.equals(clientCertificatePubKeyInfo.getAlgorithm().getAlgorithm())) {
                 clientCertificateHolder = null;
-                throw new CertificateException("ClientCertificateHolder must be an EC public key");
+                throw new CertificateException("ClientCertificateHolder must contain an EC public key");
             }
         }
 
@@ -215,7 +215,7 @@ public class Certs {
             if (!clientCertificatePublicKeyQ.equals(clientKeyPairPublicKeyQ)) {
                 clientCertificateHolder = null;
                 clientKeyPair = null;
-                throw new InvalidKeyException("ClientKeyPair is not the key for ClientCertificateHolder");
+                throw new InvalidKeyException("ClientKeyPair's public key does not match the public key in ClientCertificateHolder");
             }
             clientPrivateKey = keyFactory.generatePrivate(new PKCS8EncodedKeySpec(clientKeyPair.getPrivateKeyInfo().getEncoded()));
             clientCertificate = new JcaX509CertificateConverter().setProvider("BC").getCertificate(clientCertificateHolder);
@@ -228,7 +228,8 @@ public class Certs {
      * KeyStore. If no KeyStore and no ClusterCertificate have been provided then an
      * InsecureTrustManagerFactory will be used which will accept ANY certificate supplied by the
      * GoshawkDB node: this is insecure - DO NOT USE THIS IN PRODUCTION. The ClientCertificateHolder
-     * and ClientKeyPair must have been set.
+     * and ClientKeyPair must have been set, either by calling them directly, or through calling
+     * parseClientPEM.
      */
     public SslContext buildClientSslContext() throws KeyStoreException, NoSuchAlgorithmException, CertificateException, SSLException {
         if (clientCertificateHolder == null || clientKeyPair == null) {

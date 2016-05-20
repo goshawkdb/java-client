@@ -1,5 +1,8 @@
 package io.goshawkdb.client;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+
 import io.goshawkdb.client.capnp.ConnectionCap;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
@@ -29,8 +32,11 @@ public class Connection {
 
     private ChannelFuture connectFuture;
     private State state;
-    private final byte[] namespace = new byte[KEY_LEN];
+    private ChannelPipeline pipeline;
     private VarUUId root;
+    private ByteBuffer nameSpace;
+    private long nextVarUUId;
+    private long nextTxnId;
     private Transaction txn;
 
     Connection(final ConnectionFactory cf, final Certs c, final String h, final int p) {
@@ -108,7 +114,6 @@ public class Connection {
     public <Result> Result runTransaction(final TransactionFun<Result> fun) {
         final VarUUId r;
         final Transaction oldTxn;
-        final Transaction<Result> curTxn;
         synchronized (lock) {
             if (root == null) {
                 throw new IllegalStateException("Unable to start transaction: root object not ready");
@@ -116,7 +121,7 @@ public class Connection {
             r = root;
             oldTxn = txn;
         }
-        curTxn = new Transaction(fun, this, r, oldTxn);
+        final Transaction<Result> curTxn = new Transaction(fun, this, r, oldTxn);
         synchronized (lock) {
             txn = curTxn;
         }
@@ -125,6 +130,16 @@ public class Connection {
             txn = oldTxn;
         }
         return result;
+    }
+
+    VarUUId nextVarUUId() {
+        synchronized (lock) {
+            nameSpace.putLong(0, nextVarUUId);
+            nextVarUUId++;
+            byte[] varUUIdArray = new byte[KEY_LEN];
+            System.arraycopy(nameSpace.array(), 0, varUUIdArray, 0, KEY_LEN);
+            return new VarUUId(varUUIdArray);
+        }
     }
 
     void serverHello(final ConnectionCap.HelloClientFromServer.Reader hello, final ChannelHandlerContext ctx) throws InterruptedException {
@@ -137,8 +152,13 @@ public class Connection {
             throw new IllegalStateException("Root object VarUUId is of wrong length!");
         } else {
             synchronized (lock) {
+                pipeline = ctx.pipeline();
                 root = new VarUUId(rootId);
-                System.arraycopy(hello.getNamespace().toArray(), 0, namespace, 8, KEY_LEN - 8);
+                byte[] nameSpaceArray = new byte[KEY_LEN];
+                System.arraycopy(hello.getNamespace().toArray(), 0, nameSpaceArray, 8, KEY_LEN - 8);
+                nameSpace = ByteBuffer.wrap(nameSpaceArray);
+                nameSpace.order(ByteOrder.BIG_ENDIAN);
+                nextVarUUId = 0;
                 lock.notifyAll();
             }
             nextState(ctx);
@@ -157,12 +177,12 @@ public class Connection {
             switch (state) {
                 case AwaitHandshake: {
                     state = State.AwaitServerHello;
-                    connectFuture.channel().pipeline().addLast(new AwaitServerHello(this));
+                    ctx.pipeline().addLast(new AwaitServerHello(this));
                     break;
                 }
                 case AwaitServerHello: {
                     state = State.Run;
-                    connectFuture.channel().pipeline().addLast(new Heartbeater(this, ctx));
+                    ctx.pipeline().addLast(new Heartbeater(this, ctx));
                     break;
                 }
                 case Run: {
