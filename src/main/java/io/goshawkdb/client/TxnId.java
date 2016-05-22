@@ -2,7 +2,10 @@ package io.goshawkdb.client;
 
 import org.apache.commons.codec.binary.Hex;
 
+import java.nio.ByteBuffer;
 import java.util.Arrays;
+
+import static io.goshawkdb.client.ConnectionFactory.KEY_LEN;
 
 
 public class TxnId {
@@ -10,6 +13,11 @@ public class TxnId {
 
     TxnId(final byte[] id) {
         this.id = id;
+    }
+
+    TxnId(final ByteBuffer buf) {
+        id = new byte[KEY_LEN];
+        buf.get(id, 0, KEY_LEN);
     }
 
     @Override

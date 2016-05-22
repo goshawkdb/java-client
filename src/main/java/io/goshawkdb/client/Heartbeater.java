@@ -77,9 +77,11 @@ final class Heartbeater extends ChannelDuplexHandler implements TimerTask {
                 return;
             }
             missedHeartbeats++;
-            if (mustSendBeat && context != null) {
+            if (mustSendBeat) {
                 // Because we write using our context, we won't self-trigger our own write() method.
                 context.writeAndFlush(heartbeat);
+            } else {
+                mustSendBeat = true;
             }
             timeout = t.timer().newTimeout(this, ConnectionFactory.HEARTBEAT_INTERVAL, ConnectionFactory.HEARTBEAT_INTERVAL_UNIT);
         }

@@ -1,11 +1,19 @@
 package io.goshawkdb.client;
 
+import org.capnproto.MessageBuilder;
+import org.capnproto.MessageReader;
+import org.capnproto.StructList;
+
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Arrays;
 
 import io.goshawkdb.client.capnp.ConnectionCap;
+import io.goshawkdb.client.capnp.TransactionCap;
 import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -18,6 +26,9 @@ import static io.goshawkdb.client.ConnectionFactory.KEY_LEN;
 
 public class Connection {
 
+    @ChannelHandler.Sharable
+    private class TxnSubmitter extends ChannelDuplexHandler {}
+
     private enum State {
         AwaitHandshake, AwaitServerHello, Run;
     }
@@ -29,6 +40,32 @@ public class Connection {
     private final String host;
     private final int port;
     private final Bootstrap bootstrap;
+    private final Cache cache = new Cache();
+
+    private TxnResult liveTxn = null;
+
+    private final ChannelDuplexHandler txnSubmitter = new TxnSubmitter() {
+        @Override
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            if (msg instanceof MessageReader) {
+                MessageReader read = (MessageReader) msg;
+                final ConnectionCap.ClientMessage.Reader result = read.getRoot(ConnectionCap.ClientMessage.factory);
+                if (result.isClientTxnOutcome()) {
+                    ctx.pipeline().remove(this);
+                    final TransactionCap.ClientTxnOutcome.Reader outcome = result.getClientTxnOutcome();
+                    synchronized (lock) {
+                        if (liveTxn == null) {
+                            throw new IllegalStateException("Received txn outcome for unknown txn");
+                        }
+                        liveTxn.outcome = outcome;
+                        lock.notifyAll();
+                    }
+                    return;
+                }
+            }
+            super.channelRead(ctx, msg);
+        }
+    };
 
     private ChannelFuture connectFuture;
     private State state;
@@ -111,7 +148,7 @@ public class Connection {
         }
     }
 
-    public <Result> Result runTransaction(final TransactionFun<Result> fun) {
+    public <Result> Result runTransaction(final TransactionFun<Result> fun) throws Throwable {
         final VarUUId r;
         final Transaction oldTxn;
         synchronized (lock) {
@@ -121,33 +158,33 @@ public class Connection {
             r = root;
             oldTxn = txn;
         }
-        final Transaction<Result> curTxn = new Transaction(fun, this, r, oldTxn);
+        final Transaction<Result> curTxn = new Transaction(fun, this, this.cache, r, oldTxn);
         synchronized (lock) {
             txn = curTxn;
         }
-        final Result result = curTxn.run();
-        synchronized (lock) {
-            txn = oldTxn;
+        try {
+            return curTxn.run();
+        } finally {
+            synchronized (lock) {
+                txn = oldTxn;
+            }
         }
-        return result;
     }
 
     VarUUId nextVarUUId() {
         synchronized (lock) {
             nameSpace.putLong(0, nextVarUUId);
             nextVarUUId++;
-            byte[] varUUIdArray = new byte[KEY_LEN];
-            System.arraycopy(nameSpace.array(), 0, varUUIdArray, 0, KEY_LEN);
-            return new VarUUId(varUUIdArray);
+            return new VarUUId(nameSpace);
         }
     }
 
     void serverHello(final ConnectionCap.HelloClientFromServer.Reader hello, final ChannelHandlerContext ctx) throws InterruptedException {
-        final byte[] rootId = hello.getRootId().toArray();
-        if (rootId.length == 0) {
+        final ByteBuffer rootId = hello.getRootId().asByteBuffer();
+        if (rootId.limit() == 0) {
             lock.notifyAll();
             throw new IllegalStateException("Cluster is not yet formed; Root object has not been created.");
-        } else if (rootId.length != KEY_LEN) {
+        } else if (rootId.limit() != KEY_LEN) {
             lock.notifyAll();
             throw new IllegalStateException("Root object VarUUId is of wrong length!");
         } else {
@@ -193,6 +230,59 @@ public class Connection {
                     break;
                 }
             }
+        }
+    }
+
+    TxnResult submitTransaction(final MessageBuilder msg, final TransactionCap.ClientTxn.Builder cTxn) {
+        synchronized (lock) {
+            if (state != State.Run) {
+                throw new IllegalStateException("Connection in wrong state: " + state);
+            } else if (liveTxn != null) {
+                throw new IllegalStateException("Existing live txn");
+            }
+            nameSpace.putLong(0, nextTxnId);
+            byte[] txnIdArray = new byte[KEY_LEN];
+            System.arraycopy(nameSpace.array(), 0, txnIdArray, 0, KEY_LEN);
+            cTxn.setId(txnIdArray);
+            final TxnResult result = new TxnResult();
+            liveTxn = result;
+            pipeline.addLast(txnSubmitter);
+            pipeline.writeAndFlush(msg);
+            while (result.outcome == null && isConnected()) {
+                try {
+                    lock.wait();
+                } catch (InterruptedException e) {
+                }
+            }
+            liveTxn = null;
+            if (result.outcome == null) {
+                throw new IllegalStateException("Connection disconnected whilst waiting txn result.");
+            }
+            if (!Arrays.equals(txnIdArray, result.outcome.getId().toArray())) {
+                throw new IllegalStateException("Received txn outcome for wrong txn");
+            }
+            final ByteBuffer finalTxnIdBuf = result.outcome.getFinalId().asByteBuffer();
+            finalTxnIdBuf.order(ByteOrder.BIG_ENDIAN);
+            final long finalTxnIdLong = finalTxnIdBuf.getLong(0);
+            if (finalTxnIdLong < nextTxnId) {
+                throw new IllegalStateException("Final (" + finalTxnIdLong + ") < next (" + nextTxnId + ")");
+            }
+            nextTxnId = finalTxnIdLong + 1;
+            final TxnId finalTxnId = new TxnId(finalTxnIdBuf);
+            switch (result.outcome.which()) {
+                case COMMIT: {
+                    cache.updateFromTxnCommit(cTxn.asReader(),finalTxnId);
+                    break;
+                }
+                case ABORT: {
+                    cache.updateFromTxnAbort(result.outcome.getAbort());
+                    break;
+                }
+                case ERROR: {
+                    throw new IllegalStateException(result.outcome.getError().toString());
+                }
+            }
+            return result;
         }
     }
 }

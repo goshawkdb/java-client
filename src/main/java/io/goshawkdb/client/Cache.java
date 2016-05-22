@@ -36,7 +36,7 @@ final class Cache {
         synchronized (lock) {
             while (actionIt.hasNext()) {
                 final TransactionCap.ClientAction.Reader action = actionIt.next();
-                final VarUUId vUUId = new VarUUId(action.getVarId().asByteBuffer().array());
+                final VarUUId vUUId = new VarUUId(action.getVarId().asByteBuffer());
                 switch (action.which()) {
                     case WRITE: {
                         final TransactionCap.ClientAction.Write.Reader write = action.getWrite();
@@ -67,19 +67,19 @@ final class Cache {
         synchronized (lock) {
             while (updatesIt.hasNext()) {
                 final TransactionCap.ClientUpdate.Reader update = updatesIt.next();
-                final TxnId txnId = new TxnId(update.getVersion().asByteBuffer().array());
+                final TxnId txnId = new TxnId(update.getVersion().asByteBuffer());
                 final StructList.Reader<TransactionCap.ClientAction.Reader> actions = update.getActions();
                 final Iterator<TransactionCap.ClientAction.Reader> actionsIt = actions.iterator();
                 while (actionsIt.hasNext()) {
                     final TransactionCap.ClientAction.Reader action = actionsIt.next();
-                    final VarUUId vUUId = new VarUUId(action.getVarId().asByteBuffer().array());
+                    final VarUUId vUUId = new VarUUId(action.getVarId().asByteBuffer());
                     switch (action.which()) {
                         case DELETE: {
                             updateFromDelete(vUUId, txnId);
                             break;
                         }
                         case WRITE: {
-                            // We're missing TxnId and TxnId made a write of vUUId (to
+                            // We're missing TxnId and TxnId made a write of id (to
                             // version TxnId).
                             final TransactionCap.ClientAction.Write.Reader write = action.getWrite();
                             final DataList.Reader refs = write.getReferences();
@@ -106,9 +106,9 @@ final class Cache {
 
     private boolean updateFromWrite(final TxnId txnId, final VarUUId vUUId, final Data.Reader value, final DataList.Reader refs) {
         ValueRef vr = m.get(vUUId);
-        final boolean found = vr != null;
+        final boolean missing = vr == null;
         final VarUUId[] references = new VarUUId[refs.size()];
-        if (!found) {
+        if (missing) {
             vr = new ValueRef();
             vr.references = references;
             m.put(vUUId, vr);
@@ -120,13 +120,13 @@ final class Cache {
             vr.references = references;
         }
         vr.version = txnId;
-        vr.value = value.asByteBuffer();
+        vr.value = value.asByteBuffer().asReadOnlyBuffer();
         final Iterator<Data.Reader> refsIt = refs.iterator();
         int idx = 0;
         while (refsIt.hasNext()) {
-            vr.references[idx] = new VarUUId(refsIt.next().asByteBuffer().array());
+            vr.references[idx] = new VarUUId(refsIt.next().asByteBuffer());
         }
-        return found;
+        return !missing;
     }
 
 }

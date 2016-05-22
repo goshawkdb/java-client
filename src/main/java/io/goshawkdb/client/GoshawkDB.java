@@ -43,7 +43,7 @@ public class GoshawkDB {
             "uYe5KPLwvAklFGOj0YmrsoPpmawr0/2xeA==\n" +
             "-----END EC PRIVATE KEY-----";
 
-    public static void main(String[] args) throws NoSuchProviderException, NoSuchAlgorithmException, CertificateException, KeyStoreException, IOException, InvalidKeySpecException, InvalidKeyException, InterruptedException {
+    public static void main(String[] args) throws Throwable {
 
         final Certs certs = new Certs();
         certs.addClusterCertificate("goshawkdb", new ByteArrayInputStream(clusterCertStr.getBytes()));
@@ -53,6 +53,14 @@ public class GoshawkDB {
         try {
             Connection conn = connFactory.connect(certs, "localhost", 10001);
             System.out.println("Connected");
+
+            int result = conn.runTransaction((txn) -> {
+                final GoshawkObj root = txn.getRoot();
+                System.out.println("found root was " + root.id + " at version " + root.getVersion());
+                return 42;
+            });
+            System.out.println(result);
+            conn.close();
             conn.awaitClose();
             System.out.println("Disconnected");
 

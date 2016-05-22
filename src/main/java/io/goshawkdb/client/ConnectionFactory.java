@@ -15,6 +15,7 @@ public class ConnectionFactory {
     static final int HEARTBEAT_INTERVAL = 2;
     static final TimeUnit HEARTBEAT_INTERVAL_UNIT = TimeUnit.SECONDS;
     static final int KEY_LEN = 20;
+    static final TxnId VERSION_ZERO = new TxnId(new byte[KEY_LEN]);
 
     static final HashedWheelTimer timer = new HashedWheelTimer();
 
