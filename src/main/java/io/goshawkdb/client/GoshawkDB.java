@@ -1,14 +1,9 @@
 package io.goshawkdb.client;
 
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.io.StringReader;
-import java.security.InvalidKeyException;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
-import java.security.cert.CertificateException;
-import java.security.spec.InvalidKeySpecException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 public class GoshawkDB {
 
@@ -54,12 +49,24 @@ public class GoshawkDB {
             Connection conn = connFactory.connect(certs, "localhost", 10001);
             System.out.println("Connected");
 
-            int result = conn.runTransaction((txn) -> {
-                final GoshawkObj root = txn.getRoot();
-                System.out.println("found root was " + root.id + " at version " + root.getVersion());
-                return 42;
-            });
-            System.out.println(result);
+            final long start = System.nanoTime();
+            for (int idx = 0; idx < 10000; idx++) {
+                final int idy = idx;
+                long result = conn.runTransaction((txn) -> {
+                    final GoshawkObj root = txn.getRoot();
+                    if (idy == 0) {
+                        root.set(ByteBuffer.wrap(new byte[8]));
+                        return 0L;
+                    } else {
+                        final long val = 1 + root.getValue().order(ByteOrder.BIG_ENDIAN).getLong(0);
+                        root.set(ByteBuffer.wrap(new byte[8]).order(ByteOrder.BIG_ENDIAN).putLong(0, val));
+                        return val;
+                    }
+                });
+                System.out.println(result);
+            }
+            final long end = System.nanoTime();
+            System.out.println("Elapsed time: " + ((double) (end - start)) / 1000000D + "ms");
             conn.close();
             conn.awaitClose();
             System.out.println("Disconnected");

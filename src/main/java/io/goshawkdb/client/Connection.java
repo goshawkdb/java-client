@@ -2,7 +2,6 @@ package io.goshawkdb.client;
 
 import org.capnproto.MessageBuilder;
 import org.capnproto.MessageReader;
-import org.capnproto.StructList;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -27,7 +26,8 @@ import static io.goshawkdb.client.ConnectionFactory.KEY_LEN;
 public class Connection {
 
     @ChannelHandler.Sharable
-    private class TxnSubmitter extends ChannelDuplexHandler {}
+    private class TxnSubmitter extends ChannelDuplexHandler {
+    }
 
     private enum State {
         AwaitHandshake, AwaitServerHello, Run;
@@ -271,7 +271,7 @@ public class Connection {
             final TxnId finalTxnId = new TxnId(finalTxnIdBuf);
             switch (result.outcome.which()) {
                 case COMMIT: {
-                    cache.updateFromTxnCommit(cTxn.asReader(),finalTxnId);
+                    cache.updateFromTxnCommit(cTxn.asReader(), finalTxnId);
                     break;
                 }
                 case ABORT: {

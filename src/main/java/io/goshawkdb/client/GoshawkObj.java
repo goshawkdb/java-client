@@ -27,7 +27,9 @@ public class GoshawkObj {
     public ByteBuffer getValue() {
         checkExpired();
         maybeRecordRead(false);
-        return state.curValue;
+        final ByteBuffer buf = state.curValue.asReadOnlyBuffer();
+        buf.rewind();
+        return buf;
     }
 
     /**
@@ -36,7 +38,9 @@ public class GoshawkObj {
     public GoshawkObj[] getReferences() {
         checkExpired();
         maybeRecordRead(false);
-        return state.curObjectRefs;
+        final GoshawkObj[] refs = new GoshawkObj[state.curObjectRefs.length];
+        System.arraycopy(state.curObjectRefs, 0, refs, 0, state.curObjectRefs.length);
+        return refs;
     }
 
     /**
@@ -151,7 +155,7 @@ public class GoshawkObj {
                 ByteBuffer.allocateDirect(buf.capacity()) :
                 ByteBuffer.allocate(buf.capacity());
         final ByteBuffer readOnlyCopy = buf.asReadOnlyBuffer();
-        readOnlyCopy.flip();
+        readOnlyCopy.rewind();
         clone.put(readOnlyCopy);
         return clone;
     }
