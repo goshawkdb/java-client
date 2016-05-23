@@ -1,0 +1,5 @@
+Name: io/goshawkdb/client
+Specification-Title: GoshawkDB Java Client
+Specification-Vendor: GoshawkDB
+Implementation-Title: io.goshawkdb.client
+Implementation-Vendor: GoshawkDB
