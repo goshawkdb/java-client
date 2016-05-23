@@ -47,17 +47,12 @@ public class Transaction<Result> {
                     }
                 }
                 resetObjects();
-                Throwable t = null;
                 Result result = null;
                 try {
                     result = fun.Run(this);
                 } catch (final TransactionRestartRequiredException e) {
-                } catch (final Throwable e) {
-                    t = e;
                 }
-                if (t != null) {
-                    throw t;
-                } else if (resetInProgress) {
+                if (resetInProgress) {
                     if (parent == null || !parent.resetInProgress) {
                         continue;
                     } else {
