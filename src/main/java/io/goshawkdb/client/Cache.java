@@ -20,7 +20,7 @@ final class Cache {
     }
 
     private final Object lock = new Object();
-    private final HashMap<VarUUId, ValueRef> m = new HashMap<VarUUId, ValueRef>();
+    private final HashMap<VarUUId, ValueRef> m = new HashMap<>();
 
     Cache() {
     }
@@ -62,16 +62,14 @@ final class Cache {
     }
 
     List<VarUUId> updateFromTxnAbort(final StructList.Reader<TransactionCap.ClientUpdate.Reader> updates) {
-        final ArrayList<VarUUId> modifiedVars = new ArrayList<VarUUId>(updates.size());
+        final ArrayList<VarUUId> modifiedVars = new ArrayList<>(updates.size());
         final Iterator<TransactionCap.ClientUpdate.Reader> updatesIt = updates.iterator();
         synchronized (lock) {
             while (updatesIt.hasNext()) {
                 final TransactionCap.ClientUpdate.Reader update = updatesIt.next();
                 final TxnId txnId = new TxnId(update.getVersion().asByteBuffer());
                 final StructList.Reader<TransactionCap.ClientAction.Reader> actions = update.getActions();
-                final Iterator<TransactionCap.ClientAction.Reader> actionsIt = actions.iterator();
-                while (actionsIt.hasNext()) {
-                    final TransactionCap.ClientAction.Reader action = actionsIt.next();
+                actions.forEach((final TransactionCap.ClientAction.Reader action) -> {
                     final VarUUId vUUId = new VarUUId(action.getVarId().asByteBuffer());
                     switch (action.which()) {
                         case DELETE: {
@@ -89,7 +87,7 @@ final class Cache {
                             break;
                         }
                     }
-                }
+                });
             }
         }
         return modifiedVars;

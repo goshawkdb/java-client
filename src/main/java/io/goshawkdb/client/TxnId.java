@@ -9,6 +9,7 @@ import static io.goshawkdb.client.ConnectionFactory.KEY_LEN;
 
 
 public class TxnId {
+
     public final byte[] id;
 
     TxnId(final byte[] id) {

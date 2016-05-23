@@ -7,7 +7,6 @@ class ObjectState {
     final GoshawkObj obj;
 
     ObjectState parent = null;
-
     Transaction transaction = null;
     TxnId curVersion = null;
     ByteBuffer curValue = null;

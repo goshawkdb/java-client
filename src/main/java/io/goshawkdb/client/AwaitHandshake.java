@@ -15,6 +15,7 @@ import static io.goshawkdb.client.ConnectionFactory.PRODUCT_NAME;
 import static io.goshawkdb.client.ConnectionFactory.PRODUCT_VERSION;
 
 final class AwaitHandshake extends ChannelInboundHandlerAdapter {
+
     private final Connection conn;
 
     AwaitHandshake(final Connection c) {

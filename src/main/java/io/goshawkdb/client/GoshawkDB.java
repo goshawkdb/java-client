@@ -55,11 +55,11 @@ public class GoshawkDB {
                 long result = conn.runTransaction((txn) -> {
                     final GoshawkObj root = txn.getRoot();
                     if (idy == 0) {
-                        root.set(ByteBuffer.wrap(new byte[8]));
+                        root.set(ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN).putLong(0));
                         return 0L;
                     } else {
                         final long val = 1 + root.getValue().order(ByteOrder.BIG_ENDIAN).getLong(0);
-                        root.set(ByteBuffer.wrap(new byte[8]).order(ByteOrder.BIG_ENDIAN).putLong(0, val));
+                        root.set(ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN).putLong(0, val));
                         return val;
                     }
                 });

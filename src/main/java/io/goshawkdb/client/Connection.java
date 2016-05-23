@@ -26,15 +26,14 @@ import static io.goshawkdb.client.ConnectionFactory.KEY_LEN;
 public class Connection {
 
     @ChannelHandler.Sharable
-    private class TxnSubmitter extends ChannelDuplexHandler {
+    private static class TxnSubmitter extends ChannelDuplexHandler {
     }
 
     private enum State {
-        AwaitHandshake, AwaitServerHello, Run;
+        AwaitHandshake, AwaitServerHello, Run
     }
 
     final Certs certs;
-    final ConnectionFactory connFactory;
 
     private final Object lock = new Object();
     private final String host;
@@ -58,12 +57,24 @@ public class Connection {
                             throw new IllegalStateException("Received txn outcome for unknown txn");
                         }
                         liveTxn.outcome = outcome;
+                        liveTxn = null;
                         lock.notifyAll();
                     }
                     return;
                 }
             }
             super.channelRead(ctx, msg);
+        }
+
+        @Override
+        public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+            synchronized (lock) {
+                if (liveTxn != null) {
+                    liveTxn = null;
+                    lock.notifyAll();
+                }
+            }
+            super.channelInactive(ctx);
         }
     };
 
@@ -80,7 +91,6 @@ public class Connection {
         port = p;
         host = h;
         certs = c;
-        connFactory = cf;
         state = State.AwaitHandshake;
         bootstrap = new Bootstrap();
         bootstrap.group(cf.group);
@@ -158,7 +168,7 @@ public class Connection {
             r = root;
             oldTxn = txn;
         }
-        final Transaction<Result> curTxn = new Transaction(fun, this, this.cache, r, oldTxn);
+        final Transaction<Result> curTxn = new Transaction<>(fun, this, this.cache, r, oldTxn);
         synchronized (lock) {
             txn = curTxn;
         }
@@ -174,6 +184,7 @@ public class Connection {
     VarUUId nextVarUUId() {
         synchronized (lock) {
             nameSpace.putLong(0, nextVarUUId);
+            nameSpace.rewind();
             nextVarUUId++;
             return new VarUUId(nameSpace);
         }
@@ -191,9 +202,9 @@ public class Connection {
             synchronized (lock) {
                 pipeline = ctx.pipeline();
                 root = new VarUUId(rootId);
-                byte[] nameSpaceArray = new byte[KEY_LEN];
-                System.arraycopy(hello.getNamespace().toArray(), 0, nameSpaceArray, 8, KEY_LEN - 8);
-                nameSpace = ByteBuffer.wrap(nameSpaceArray);
+                nameSpace = ByteBuffer.allocate(KEY_LEN);
+                nameSpace.position(8);
+                nameSpace.put(hello.getNamespace().asByteBuffer());
                 nameSpace.order(ByteOrder.BIG_ENDIAN);
                 nextVarUUId = 0;
                 lock.notifyAll();
@@ -219,14 +230,7 @@ public class Connection {
                 }
                 case AwaitServerHello: {
                     state = State.Run;
-                    ctx.pipeline().addLast(new Heartbeater(this, ctx));
-                    break;
-                }
-                case Run: {
-                    if (connectFuture != null) {
-                        connectFuture.channel().close();
-                        awaitClose();
-                    }
+                    ctx.pipeline().addLast(new Heartbeater(ctx));
                     break;
                 }
             }
@@ -241,8 +245,9 @@ public class Connection {
                 throw new IllegalStateException("Existing live txn");
             }
             nameSpace.putLong(0, nextTxnId);
+            nameSpace.rewind();
             byte[] txnIdArray = new byte[KEY_LEN];
-            System.arraycopy(nameSpace.array(), 0, txnIdArray, 0, KEY_LEN);
+            nameSpace.get(txnIdArray);
             cTxn.setId(txnIdArray);
             final TxnResult result = new TxnResult();
             liveTxn = result;
@@ -254,7 +259,6 @@ public class Connection {
                 } catch (InterruptedException e) {
                 }
             }
-            liveTxn = null;
             if (result.outcome == null) {
                 throw new IllegalStateException("Connection disconnected whilst waiting txn result.");
             }

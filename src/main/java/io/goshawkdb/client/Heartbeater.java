@@ -14,7 +14,6 @@ final class Heartbeater extends ChannelDuplexHandler implements TimerTask {
 
     private final Object lock = new Object();
 
-    private final Connection conn;
     private final ChannelHandlerContext context;
     private final MessageBuilder heartbeat;
 
@@ -22,8 +21,7 @@ final class Heartbeater extends ChannelDuplexHandler implements TimerTask {
     private boolean mustSendBeat = true;
     private Timeout timeout;
 
-    Heartbeater(final Connection connection, final ChannelHandlerContext ctx) {
-        conn = connection;
+    Heartbeater(final ChannelHandlerContext ctx) {
         context = ctx;
         heartbeat = new MessageBuilder();
         final ConnectionCap.ClientMessage.Builder msg = heartbeat.initRoot(ConnectionCap.ClientMessage.factory);

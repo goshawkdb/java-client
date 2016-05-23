@@ -8,13 +8,9 @@ import java.util.Arrays;
 import static io.goshawkdb.client.ConnectionFactory.KEY_LEN;
 
 public class VarUUId {
+
     public final byte[] id;
 
-    /*
-    VarUUId(final byte[] id) {
-        this.id = id;
-    }
-*/
     VarUUId(final ByteBuffer buf) {
         id = new byte[KEY_LEN];
         buf.get(id, 0, KEY_LEN);

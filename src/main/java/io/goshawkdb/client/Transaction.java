@@ -16,11 +16,11 @@ import io.goshawkdb.client.capnp.TransactionCap;
 public class Transaction<Result> {
 
     final Cache cache;
-    private final HashMap<VarUUId, GoshawkObj> objs = new HashMap<VarUUId, GoshawkObj>();
+    private final HashMap<VarUUId, GoshawkObj> objs = new HashMap<>();
     private final TransactionFun<Result> fun;
     private final Connection conn;
     private final VarUUId root;
-    private final Transaction parent;
+    private final Transaction<?> parent;
 
     boolean resetInProgress = false;
 
@@ -47,8 +47,8 @@ public class Transaction<Result> {
                 Result result = null;
                 try {
                     result = fun.Run(this);
-                } catch (TransactionRestartRequiredException e) {
-                } catch (Throwable e) {
+                } catch (final TransactionRestartRequiredException e) {
+                } catch (final Throwable e) {
                     t = e;
                 }
                 if (t != null) {
@@ -110,12 +110,15 @@ public class Transaction<Result> {
             return obj;
         } else if (parent != null) {
             obj = parent.getObject(vUUId, false);
-            if (addToTxn) {
-                obj.state = obj.state.clone(this);
-                objs.put(vUUId, obj);
+            if (obj != null) {
+                if (addToTxn) {
+                    obj.state = obj.state.clone(this);
+                    objs.put(vUUId, obj);
+                }
+                return obj;
             }
-            return obj;
-        } else if (addToTxn) {
+        }
+        if (addToTxn) {
             obj = new GoshawkObj(vUUId, conn);
             objs.put(vUUId, obj);
             obj.state = new ObjectState(obj, this);
@@ -168,7 +171,7 @@ public class Transaction<Result> {
 
     private void submitRetryTransaction() {
         final HashMap<VarUUId, ObjectState> reads = new HashMap<>();
-        for (Transaction ancestor = this; ancestor != null; ancestor = ancestor.parent) {
+        for (Transaction<?> ancestor = this; ancestor != null; ancestor = ancestor.parent) {
             final Transaction ancestorFinal = ancestor;
             final HashMap<VarUUId, GoshawkObj> objs = ancestor.objs;
             objs.forEach((final VarUUId vUUId, final GoshawkObj obj) -> {
@@ -241,7 +244,7 @@ public class Transaction<Result> {
                 if (list == reads) {
                     action.initRead().setVersion(state.curVersion.id);
                 } else {
-                    DataList.Builder refs = null;
+                    DataList.Builder refs;
                     if (list == writes) {
                         TransactionCap.ClientAction.Write.Builder write = action.initWrite();
                         refs = write.initReferences(state.curObjectRefs.length);

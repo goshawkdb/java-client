@@ -12,8 +12,8 @@ import static io.goshawkdb.client.ConnectionFactory.VERSION_ZERO;
 
 public class GoshawkObj {
 
+    private final Connection conn;
     final VarUUId id;
-    final Connection conn;
     ObjectState state;
 
     GoshawkObj(final VarUUId vUUId, final Connection connection) {
