@@ -28,14 +28,14 @@ public class ParCountTest extends TestBase {
     public void test() throws Throwable {
         final int threadCount = 8;
         final Connection conn = factory.connect(certs, "localhost", 10001);
-        final ArrayList<GoshawkObj> roots = conn.runTransaction((txn) -> {
-            final ArrayList<GoshawkObj> objs = new ArrayList<>(threadCount);
+        conn.runTransaction((txn) -> {
+            final GoshawkObj[] roots = new GoshawkObj[threadCount];
             for (int threadIndex = 0; threadIndex < threadCount; threadIndex++) {
-                objs.add(txn.createObject(ByteBuffer.allocate(0)));
+                roots[threadIndex] = txn.createObject(ByteBuffer.allocate(0));
             }
             final GoshawkObj root = txn.getRoot();
-            root.setReferences(objs.toArray(new GoshawkObj[threadCount]));
-            return objs;
+            root.setReferences(roots);
+            return null;
         });
         conn.close();
 
