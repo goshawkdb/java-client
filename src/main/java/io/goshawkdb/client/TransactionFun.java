@@ -6,12 +6,14 @@ package io.goshawkdb.client;
  */
 public interface TransactionFun<Result> {
     /**
-     * The callback invoked (potentially several times) to run your transaction.
+     * The callback invoked (potentially several times) to run your transaction. If you wish to
+     * abort the transaction, throw an exception from within.
      *
      * @param txn The API through which your transaction can navigate and interact with the
      *            object-graph stored by GoshawkDB.
      * @return A result
-     * @throws Throwable your callback may throw an exception.
+     * @throws Throwable your callback may throw an exception, for example to indicate you wish the
+     *                   transaction to be aborted.
      */
     Result Run(final Transaction txn) throws Throwable;
 }

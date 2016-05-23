@@ -123,6 +123,7 @@ final class Cache {
         int idx = 0;
         while (refsIt.hasNext()) {
             vr.references[idx] = new VarUUId(refsIt.next().asByteBuffer());
+            idx++;
         }
         return !missing;
     }

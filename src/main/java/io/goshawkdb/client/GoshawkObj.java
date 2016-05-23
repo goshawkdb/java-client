@@ -17,12 +17,17 @@ import static io.goshawkdb.client.ConnectionFactory.VERSION_ZERO;
 public class GoshawkObj {
 
     private final Connection conn;
-    final VarUUId id;
+    public final VarUUId id;
     ObjectState state;
 
     GoshawkObj(final VarUUId vUUId, final Connection connection) {
         id = vUUId;
         conn = connection;
+    }
+
+    @Override
+    public String toString() {
+        return "GoshawkObj(" + id + ")";
     }
 
     /**
@@ -48,7 +53,7 @@ public class GoshawkObj {
         checkExpired();
         maybeRecordRead(false);
         final GoshawkObj[] refs = new GoshawkObj[state.curObjectRefs.length];
-        System.arraycopy(state.curObjectRefs, 0, refs, 0, state.curObjectRefs.length);
+        System.arraycopy(state.curObjectRefs, 0, refs, 0, refs.length);
         return refs;
     }
 
@@ -108,6 +113,9 @@ public class GoshawkObj {
         checkExpired();
         state.write = true;
         state.curValue = cloneByteBuffer(value);
+        if (state.curObjectRefs == null) {
+            state.curObjectRefs = new GoshawkObj[0];
+        }
     }
 
     /**
@@ -125,6 +133,9 @@ public class GoshawkObj {
         checkExpired();
         state.write = true;
         state.curObjectRefs = new GoshawkObj[references.length];
+        if (state.curValue == null) {
+            state.curValue = ByteBuffer.allocate(0);
+        }
         System.arraycopy(references, 0, state.curObjectRefs, 0, references.length);
     }
 
@@ -177,7 +188,10 @@ public class GoshawkObj {
         return conn.submitTransaction(msg, cTxn).modifiedVars;
     }
 
-    private static ByteBuffer cloneByteBuffer(final ByteBuffer buf) {
+    static ByteBuffer cloneByteBuffer(final ByteBuffer buf) {
+        if (buf == null) {
+            return ByteBuffer.allocate(0);
+        }
         final ByteBuffer clone = (buf.isDirect()) ?
                 ByteBuffer.allocateDirect(buf.capacity()) :
                 ByteBuffer.allocate(buf.capacity());

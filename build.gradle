@@ -35,6 +35,10 @@ distributions {
     }
 }
 
+test {
+    maxParallelForks = 1
+}
+
 repositories {
     mavenCentral()
 }

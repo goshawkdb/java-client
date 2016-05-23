@@ -2,6 +2,8 @@ package io.goshawkdb.client;
 
 import java.nio.ByteBuffer;
 
+import static io.goshawkdb.client.GoshawkObj.cloneByteBuffer;
+
 class ObjectState {
 
     final GoshawkObj obj;
@@ -20,8 +22,13 @@ class ObjectState {
         obj = gObj;
         create = created;
         transaction = txn;
-        curValue = val;
-        curObjectRefs = refs;
+        curValue = cloneByteBuffer(val);
+        if (refs == null) {
+            curObjectRefs = new GoshawkObj[0];
+        } else {
+            curObjectRefs = new GoshawkObj[refs.length];
+            System.arraycopy(refs, 0, curObjectRefs, 0, refs.length);
+        }
     }
 
     ObjectState(GoshawkObj gObj, Transaction txn) {

@@ -1,12 +1,19 @@
-package io.goshawkdb.client;
+package io.goshawkdb.test;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.StringReader;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
+import java.security.InvalidKeyException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.cert.CertificateException;
+import java.security.spec.InvalidKeySpecException;
 
-public class GoshawkDB {
+import io.goshawkdb.client.Certs;
+import io.goshawkdb.client.ConnectionFactory;
 
+public class TestBase {
     private static final String clusterCertStr = "-----BEGIN CERTIFICATE-----\n" +
             "MIIBxzCCAW2gAwIBAgIIQqu37k6KPOIwCgYIKoZIzj0EAwIwOjESMBAGA1UEChMJ\n" +
             "R29zaGF3a0RCMSQwIgYDVQQDExtDbHVzdGVyIENBIFJvb3QgQ2VydGlmaWNhdGUw\n" +
@@ -38,44 +45,14 @@ public class GoshawkDB {
             "uYe5KPLwvAklFGOj0YmrsoPpmawr0/2xeA==\n" +
             "-----END EC PRIVATE KEY-----";
 
-    public static void main(String[] args) throws Throwable {
+    protected final ConnectionFactory factory;
+    protected final Certs certs;
 
-        final Certs certs = new Certs();
+    TestBase() throws NoSuchProviderException, NoSuchAlgorithmException, CertificateException, KeyStoreException, IOException, InvalidKeySpecException, InvalidKeyException {
+        certs = new Certs();
         certs.addClusterCertificate("goshawkdb", new ByteArrayInputStream(clusterCertStr.getBytes()));
         certs.parseClientPEM(new StringReader(clientCertKeyStr));
 
-        final ConnectionFactory connFactory = new ConnectionFactory();
-        try {
-            Connection conn = connFactory.connect(certs, "localhost", 10001);
-            System.out.println("Connected");
-
-            final long start = System.nanoTime();
-            for (int idx = 0; idx < 10000; idx++) {
-                final int idy = idx;
-                long result = conn.runTransaction((txn) -> {
-                    final GoshawkObj root = txn.getRoot();
-                    if (idy == 0) {
-                        root.set(ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN).putLong(0));
-                        return 0L;
-                    } else {
-                        final long val = 1 + root.getValue().order(ByteOrder.BIG_ENDIAN).getLong(0);
-                        root.set(ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN).putLong(0, val));
-                        return val;
-                    }
-                });
-                System.out.println(result);
-            }
-            final long end = System.nanoTime();
-            System.out.println("Elapsed time: " + ((double) (end - start)) / 1000000D + "ms");
-            conn.close();
-            conn.awaitClose();
-            System.out.println("Disconnected");
-
-        } finally {
-            System.out.println("Shutting down...");
-            connFactory.group.shutdownGracefully();
-            ConnectionFactory.timer.stop();
-            System.out.println("...done.");
-        }
+        factory = new ConnectionFactory();
     }
 }
