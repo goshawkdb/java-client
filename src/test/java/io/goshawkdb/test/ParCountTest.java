@@ -12,6 +12,7 @@ import java.security.NoSuchProviderException;
 import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
+import java.util.concurrent.ConcurrentLinkedDeque;
 
 import io.goshawkdb.client.Connection;
 import io.goshawkdb.client.GoshawkObj;
@@ -37,7 +38,8 @@ public class ParCountTest extends TestBase {
             return objs;
         });
         conn.close();
-        System.out.println(roots);
+
+        final ConcurrentLinkedDeque<Throwable> exceptionQueue = new ConcurrentLinkedDeque<>();
 
         final Thread[] threads = new Thread[threadCount];
         for (int threadIndex = 0; threadIndex < threads.length; threadIndex++) {
@@ -45,33 +47,42 @@ public class ParCountTest extends TestBase {
             final Thread t = new Thread(() -> {
                 try {
                     final Connection c = factory.connect(certs, "localhost", 10001);
-                    //Thread.sleep(1000);
-                    final VarUUId rootId = c.runTransaction((txn) -> {
-                        final GoshawkObj[] refs = txn.getRoot().getReferences();
-                        System.out.println("" + refs.length + "[" + threadIndexCopy + "] = " + refs[threadIndexCopy].id);
-                        return refs[threadIndexCopy].id;
-                    });
-                    System.out.println("" + threadIndexCopy + " = " + rootId);
+                    final VarUUId rootId = c.runTransaction(txn ->
+                            txn.getRoot().getReferences()[threadIndexCopy].id
+                    );
                     final long start = System.nanoTime();
+                    long expected = 0L;
                     for (int idx = 0; idx < 1000; idx++) {
                         final int idy = idx;
-                        long result = c.runTransaction((txn) -> {
+                        final long expectedCopy = expected;
+                        expected = c.runTransaction((txn) -> {
                             final GoshawkObj root = txn.getObject(rootId);
                             if (idy == 0) {
                                 root.set(ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN).putLong(0));
                                 return 0L;
                             } else {
-                                final long val = 1 + root.getValue().order(ByteOrder.BIG_ENDIAN).getLong(0);
-                                root.set(ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN).putLong(0, val));
-                                return val;
+                                final long old = root.getValue().order(ByteOrder.BIG_ENDIAN).getLong(0);
+                                if (old == expectedCopy) {
+                                    final long val = old + 1;
+                                    root.set(ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN).putLong(0, val));
+                                    return val;
+                                } else {
+                                    throw new IllegalStateException("" + threadIndexCopy + ": Expected " + expectedCopy + " but found " + old);
+                                }
                             }
                         });
                     }
                     final long end = System.nanoTime();
                     System.out.println("" + threadIndexCopy + ": Elapsed time: " + ((double) (end - start)) / 1000000D + "ms");
                     c.close();
-                } catch (Throwable throwable) {
-                    throwable.printStackTrace();
+                } catch (Throwable e) {
+                    exceptionQueue.add(e);
+                } finally {
+                    try {
+                        conn.close();
+                    } catch (InterruptedException e) {
+                        exceptionQueue.add(e);
+                    }
                 }
             });
             threads[threadIndex] = t;
@@ -79,6 +90,10 @@ public class ParCountTest extends TestBase {
         }
         for (Thread t : threads) {
             t.join();
+        }
+        final Throwable t = exceptionQueue.peek();
+        if (t != null) {
+            throw t;
         }
         factory.group.shutdownGracefully();
     }

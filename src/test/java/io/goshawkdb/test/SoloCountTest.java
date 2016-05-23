@@ -25,17 +25,24 @@ public class SoloCountTest extends TestBase {
     public void test() throws Throwable {
         final Connection conn = factory.connect(certs, "localhost", 10001);
         final long start = System.nanoTime();
+        long expected = 0L;
         for (int idx = 0; idx < 1000; idx++) {
             final int idy = idx;
-            long result = conn.runTransaction((txn) -> {
+            final long expectedCopy = expected;
+            expected = conn.runTransaction((txn) -> {
                 final GoshawkObj root = txn.getRoot();
                 if (idy == 0) {
                     root.set(ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN).putLong(0));
                     return 0L;
                 } else {
-                    final long val = 1 + root.getValue().order(ByteOrder.BIG_ENDIAN).getLong(0);
-                    root.set(ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN).putLong(0, val));
-                    return val;
+                    final long old = root.getValue().order(ByteOrder.BIG_ENDIAN).getLong(0);
+                    if (old == expectedCopy) {
+                        final long val = old + 1;
+                        root.set(ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN).putLong(0, val));
+                        return val;
+                    } else {
+                        throw new IllegalStateException("Expected " + expectedCopy + " but found " + old);
+                    }
                 }
             });
         }

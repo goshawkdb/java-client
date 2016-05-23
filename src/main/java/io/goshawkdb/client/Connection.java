@@ -124,7 +124,7 @@ public class Connection {
         }
         future.sync();
         synchronized (lock) {
-            while (root == null && (future.channel().isOpen() || future.channel().isActive())) {
+            while (root == null && future.channel().isOpen()) {
                 lock.wait();
             }
         }
@@ -230,6 +230,7 @@ public class Connection {
             lock.notifyAll();
             throw new IllegalStateException("Root object VarUUId is of wrong length!");
         } else {
+            nextState(ctx);
             synchronized (lock) {
                 pipeline = ctx.pipeline();
                 root = new VarUUId(rootId);
@@ -240,7 +241,6 @@ public class Connection {
                 nextVarUUId = 0;
                 lock.notifyAll();
             }
-            nextState(ctx);
         }
     }
 
