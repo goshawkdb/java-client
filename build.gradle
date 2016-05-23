@@ -12,8 +12,7 @@ javadoc {
         fileTree(dir: 'src/main/java/io/goshawkdb/client',
                 includes: ['Certs.java', 'Connection.java', 'ConnectionFactory.java',
                            'GoshawkObj.java', 'Transaction.java', 'TransactionFun.java',
-                           'TransactionRestartRequiredException.java', 'TxnId.java',
-                           'VarUUId.java'])
+                           'TxnId.java', 'VarUUId.java'])
     }
 }
 
