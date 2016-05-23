@@ -23,6 +23,11 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import static io.goshawkdb.client.ConnectionFactory.BUFFER_SIZE;
 import static io.goshawkdb.client.ConnectionFactory.KEY_LEN;
 
+/**
+ * Objects of this type represent connections to a GoshawkDB node and are created through use of the
+ * {@link ConnectionFactory}. A connection can only run one transaction at a time, and nested
+ * transactions are supported.
+ */
 public class Connection {
 
     @ChannelHandler.Sharable
@@ -125,6 +130,11 @@ public class Connection {
         }
     }
 
+    /**
+     * Test to see if we're connected to the GoshawkDB node
+     *
+     * @return true iff the connection is active and fully established to the GoshawkDB node.
+     */
     public boolean isConnected() {
         synchronized (lock) {
             if (connectFuture != null) {
@@ -134,6 +144,12 @@ public class Connection {
         return false;
     }
 
+    /**
+     * Blocks until the connection has been closed. Does not cause the connection to close, merely
+     * waits until it has been closed.
+     *
+     * @throws InterruptedException if an interruption occurs.
+     */
     public void awaitClose() throws InterruptedException {
         ChannelFuture closeFuture = null;
         synchronized (lock) {
@@ -146,6 +162,12 @@ public class Connection {
         }
     }
 
+    /**
+     * Close the connection. Blocks until the connection has been closed.
+     *
+     * @throws InterruptedException if an interruption occurs whilst we're waiting for the
+     *                              connection to close.
+     */
     public void close() throws InterruptedException {
         ChannelFuture closeFuture = null;
         synchronized (lock) {
@@ -158,6 +180,15 @@ public class Connection {
         }
     }
 
+    /**
+     * Run a transaction.
+     *
+     * @param fun      The transaction function to run. This will be automatically restarted as many
+     *                 times as necessary until the transaction either commits or chooses to abort.
+     * @param <Result> The result of the transaction fuction.
+     * @return The result of the transaction fuction.
+     * @throws Throwable The transaction may through exceptions.
+     */
     public <Result> Result runTransaction(final TransactionFun<Result> fun) throws Throwable {
         final VarUUId r;
         final Transaction oldTxn;

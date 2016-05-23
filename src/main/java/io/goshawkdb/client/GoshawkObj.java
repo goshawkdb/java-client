@@ -10,6 +10,10 @@ import io.goshawkdb.client.capnp.TransactionCap;
 
 import static io.goshawkdb.client.ConnectionFactory.VERSION_ZERO;
 
+/**
+ * Objects of this class represent nodes in the object graph stored by GoshawkDB. They can only be
+ * modified within a transaction.
+ */
 public class GoshawkObj {
 
     private final Connection conn;
@@ -23,6 +27,9 @@ public class GoshawkObj {
 
     /**
      * Returns the current value of this object.
+     *
+     * @return The current value. The returned buffer is read only and will have current position of
+     * 0.
      */
     public ByteBuffer getValue() {
         checkExpired();
@@ -33,7 +40,9 @@ public class GoshawkObj {
     }
 
     /**
-     * Returns the list of {@link GoshawkObj} to which the current object refers.
+     * Get the objects pointed to from the current object.
+     *
+     * @return the list of {@link GoshawkObj} to which the current object refers.
      */
     public GoshawkObj[] getReferences() {
         checkExpired();
@@ -44,7 +53,10 @@ public class GoshawkObj {
     }
 
     /**
-     * Returns the TxnId of the last transaction that wrote to this object.
+     * Get the current version of the object.
+     *
+     * @return the TxnId of the last transaction that wrote to this object. This will return null if
+     * the object has been created by the current transaction.
      */
     public TxnId getVersion() {
         checkExpired();
@@ -60,6 +72,12 @@ public class GoshawkObj {
      * Sets the value and references of the current object. If the value contains any references to
      * other objects, they must be explicitly declared as references otherwise on retrieval you will
      * not be able to navigate to them. Note that the order of references is stable.
+     *
+     * @param value      The value to set the object to. The buffer will be cloned and the contents
+     *                   copied. Therefore any changes you make to this param after calling this
+     *                   method will be ignored. The value is taken to be from position 0 to the
+     *                   current limit of the buffer.
+     * @param references The new list of objects to which the current object refers.
      */
     public void set(final ByteBuffer value, final GoshawkObj... references) {
         if (value == null || references == null) {
@@ -73,9 +91,15 @@ public class GoshawkObj {
     }
 
     /**
-     * Sets the value of the current object. If the value contains any references to other objects,
-     * they must be explicitly declared as references otherwise on retrieval you will not be able to
-     * navigate to them. Note that the order of references is stable.
+     * Sets the value of the current object. The current references are unaltered. If the value
+     * contains any references to other objects, they must be explicitly declared as references
+     * otherwise on retrieval you will not be able to navigate to them. Note that the order of
+     * references is stable.
+     *
+     * @param value The value to set the object to. The buffer will be cloned and the contents
+     *              copied. Therefore any changes you make to this param after calling this method
+     *              will be ignored. The value is taken to be from position 0 to the current limit
+     *              of the buffer.
      */
     public void setValue(final ByteBuffer value) {
         if (value == null) {
@@ -87,9 +111,12 @@ public class GoshawkObj {
     }
 
     /**
-     * Sets the references of the current object. If the value contains any references to other
-     * objects, they must be explicitly declared as references otherwise on retrieval you will not
-     * be able to navigate to them. Note that the order of references is stable.
+     * Sets the references of the current object. The current value is unaltered. If the value
+     * contains any references to other objects, they must be explicitly declared as references
+     * otherwise on retrieval you will not be able to navigate to them. Note that the order of
+     * references is stable.
+     *
+     * @param references The new list of objects to which the current object refers.
      */
     public void setReferences(final GoshawkObj... references) {
         if (references == null) {

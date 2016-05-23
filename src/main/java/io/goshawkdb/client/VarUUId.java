@@ -7,9 +7,12 @@ import java.util.Arrays;
 
 import static io.goshawkdb.client.ConnectionFactory.KEY_LEN;
 
+/**
+ * Representation of GoshawkDB Object Ids. Every object within GoshawkDB has a unique id.
+ */
 public class VarUUId {
 
-    public final byte[] id;
+    final byte[] id;
 
     VarUUId(final ByteBuffer buf) {
         id = new byte[KEY_LEN];

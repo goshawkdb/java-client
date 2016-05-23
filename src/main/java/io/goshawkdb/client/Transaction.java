@@ -13,6 +13,10 @@ import java.util.Iterator;
 import io.goshawkdb.client.capnp.ConnectionCap;
 import io.goshawkdb.client.capnp.TransactionCap;
 
+/**
+ * An object of this type is supplied to {@link TransactionFun}s to provide access to the object
+ * graph stored by GoshawkDB. {@link Transaction} must not be used outside of a transaction.
+ */
 public class Transaction<Result> {
 
     final Cache cache;
@@ -75,6 +79,11 @@ public class Transaction<Result> {
         }
     }
 
+    /**
+     * Perform a retry operation. The set of objects read from in the transaction is determined, and
+     * the thread is blocked until some other transaction modifies any of these objects. At which
+     * point, the transaction will be automatically restarted.
+     */
     public void retry() {
         if (resetInProgress) {
             throw TransactionRestartRequiredException.e;
@@ -83,10 +92,24 @@ public class Transaction<Result> {
         throw TransactionRestartRequiredException.e;
     }
 
+    /**
+     * Get the root of the object-graph. The Root Object is known to all clients and represents the
+     * root of the object graph. For an object to be reachable, there must be a path to it from the
+     * Root Object
+     *
+     * @return The Root Object.
+     */
     public GoshawkObj getRoot() {
         return getObject(root);
     }
 
+    /**
+     * Create a new object and set its value and references.
+     *
+     * @param value      The initial value of the new object
+     * @param references The initial set of references to objects
+     * @return The new object
+     */
     public GoshawkObj createObject(final ByteBuffer value, final GoshawkObj... references) {
         if (resetInProgress) {
             throw TransactionRestartRequiredException.e;
@@ -97,6 +120,15 @@ public class Transaction<Result> {
         return obj;
     }
 
+    /**
+     * Fetches the object specified by its unique object id. Note this will fail unless the client
+     * has already navigated the object graph at least as far as any object that has a reference to
+     * the object id. This method is not normally necessary: it is generally preferred to use the
+     * References of objects to navigate.
+     *
+     * @param vUUId The id of the object to fetch
+     * @return The object
+     */
     public GoshawkObj getObject(final VarUUId vUUId) {
         if (resetInProgress) {
             throw TransactionRestartRequiredException.e;

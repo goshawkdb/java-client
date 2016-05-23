@@ -7,11 +7,13 @@ version = '0.2'
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
-distributions {
-    main{
-        contents {
-            from('LICENSE')
-        }
+javadoc {
+    source = {
+        fileTree(dir: 'src/main/java/io/goshawkdb/client',
+                includes: ['Certs.java', 'Connection.java', 'ConnectionFactory.java',
+                           'GoshawkObj.java', 'Transaction.java', 'TransactionFun.java',
+                           'TransactionRestartRequiredException.java', 'TxnId.java',
+                           'VarUUId.java'])
     }
 }
 
@@ -23,6 +25,14 @@ jar {
     }
     into('META-INF') {
         from('LICENSE')
+    }
+}
+
+distributions {
+    main {
+        contents {
+            from('LICENSE')
+        }
     }
 }
 

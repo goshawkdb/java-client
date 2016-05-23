@@ -6,6 +6,9 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.util.HashedWheelTimer;
 
+/**
+ * This class is used to construct connections to a GoshawkDB node or cluster.
+ */
 public class ConnectionFactory {
 
     public static final int DEFAULT_PORT = 7894;
@@ -21,18 +24,43 @@ public class ConnectionFactory {
 
     public final EventLoopGroup group;
 
+    /**
+     * Create a new ConnectionFactory using a new {@link NioEventLoopGroup}
+     */
     public ConnectionFactory() {
         this(new NioEventLoopGroup());
     }
 
+    /**
+     * Create a new ConnectionFactory
+     *
+     * @param group the netty {@link EventLoopGroup} to use
+     */
     public ConnectionFactory(final EventLoopGroup group) {
         this.group = group;
     }
 
+    /**
+     * Create and start a connection to a GoshawkDB node using the default port (7894)
+     *
+     * @param certs The certificates to use for mutual authentication
+     * @param host  The host to connect to (host name or IP address)
+     * @return a new connection
+     * @throws InterruptedException if an interruption occurs during connection
+     */
     public Connection connect(final Certs certs, final String host) throws InterruptedException {
         return connect(certs, host, DEFAULT_PORT);
     }
 
+    /**
+     * Create and start a connection to a GoshawkDB node using the specified port
+     *
+     * @param certs The certificates to use for mutual authentication
+     * @param host  The host to connect to (host name or IP address)
+     * @param port  The port to connect to
+     * @return a new connection
+     * @throws InterruptedException if an interruption occurs during connection
+     */
     public Connection connect(final Certs certs, final String host, final int port) throws InterruptedException {
         final Connection conn = new Connection(this, certs, host, port);
         conn.connect();

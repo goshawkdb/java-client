@@ -64,6 +64,12 @@ public class Certs {
     private PEMKeyPair clientKeyPair;
     private PrivateKey clientPrivateKey;
 
+    /**
+     * Create a new Certs.
+     *
+     * @throws NoSuchProviderException  if BouncyCastle can't be found
+     * @throws NoSuchAlgorithmException if ECDSA support can't be found
+     */
     public Certs() throws NoSuchProviderException, NoSuchAlgorithmException {
         keyFactory = KeyFactory.getInstance("ECDSA", "BC");
     }
@@ -83,6 +89,9 @@ public class Certs {
      * connect (as opposed to the client certificate and key pair. I.e. even if you set a key store,
      * you still need to call setClientCertificateHolder and setClientKeyPair, or parseClientPEM).
      * If you supply your own KeyStore, you must have initialized it yourself.
+     *
+     * @param ks The KeyStore to use.
+     * @return A new Certs
      */
     public Certs setKeyStore(final KeyStore ks) {
         keyStore = ks;
@@ -103,6 +112,10 @@ public class Certs {
      * Loads a single X.509 certificate from the provided InputStream into the current KeyStore. If
      * no KeyStore has been set, certificates will be loaded into a fresh ephemeral KeyStore. Will
      * always close the InputStream.
+     *
+     * @param alias The name under which to store the certificate (just pick something sane)
+     * @param is    The InputStream to read the certificate from.
+     * @return The Certs object for method chaining
      */
     public Certs addClusterCertificate(final String alias, final InputStream is) throws CertificateException, NoSuchAlgorithmException, KeyStoreException, IOException {
         try {
@@ -116,6 +129,13 @@ public class Certs {
         }
     }
 
+    /**
+     * Helper in case the cluster certificate is already loaded is a byte[]
+     *
+     * @param alias The name under which to store the certificate (just pick something sane)
+     * @param cert  The bytes of the certificate
+     * @return The Certs object for method chaining
+     */
     public Certs addClusterCertificate(final String alias, final byte[] cert) throws CertificateException, NoSuchAlgorithmException, KeyStoreException, IOException {
         return addClusterCertificate(alias, new ByteArrayInputStream(cert));
     }
@@ -125,6 +145,9 @@ public class Certs {
      * present to the GoshawkDB node for authentication. The public key must be an ECDSA P256 key.
      * Once the ClientCertificateHolder and the ClientKeyPair are both set, it is verified that they
      * both contain the same public key.
+     *
+     * @param certHolder The holder for the client certificate and public key
+     * @return The Certs object for method chaining
      */
     public Certs setClientCertificateHolder(final X509CertificateHolder certHolder) throws CertificateException, InvalidKeySpecException, InvalidKeyException, IOException {
         clientCertificateHolder = certHolder;
@@ -137,6 +160,9 @@ public class Certs {
      * Set the ClientKeyPair. This must be an ECDSA P256 key pair in PEM format. Once the
      * ClientCertificateHolder and the ClientKeyPair are both set, it is verified that they both
      * contain the same public key.
+     *
+     * @param keyPair The client public and private key pair
+     * @return The Certs object for method chaining
      */
     public Certs setClientKeyPair(final PEMKeyPair keyPair) throws CertificateException, InvalidKeySpecException, InvalidKeyException, IOException {
         clientKeyPair = keyPair;
@@ -150,15 +176,14 @@ public class Certs {
      * Key Pair, and calls setClientCertificateHolder and setClientKeyPair as appropriate. Only the
      * first X.509 Certificate and the first PEM Key Pair are read, but order within the Reader does
      * not matter. The Reader is always closed.
+     *
+     * @param reader The reader to read from
+     * @return The Certs object for method chaining
      */
-    public Certs parseClientPEM(final Reader reader) throws IOException, CertificateException, InvalidKeySpecException, InvalidKeyException {
-        clientKeyPair = null;
-        clientPrivateKey = null;
-        clientCertificateHolder = null;
-        clientCertificate = null;
+    public Certs parseClientPEM(final Reader reader) throws CertificateException, InvalidKeySpecException, InvalidKeyException, IOException {
         final PEMParser parser = new PEMParser(reader);
         try {
-            Object o = null;
+            Object o;
             boolean foundCert = false;
             boolean foundKeyPair = false;
             while ((o = parser.readObject()) != null && !(foundCert && foundKeyPair)) {
@@ -177,7 +202,7 @@ public class Certs {
         return this;
     }
 
-    private void verifyClient() throws CertificateException, IOException, InvalidKeySpecException, InvalidKeyException {
+    private void verifyClient() throws CertificateException, InvalidKeyException, IOException, InvalidKeySpecException {
         SubjectPublicKeyInfo clientCertificatePubKeyInfo = null;
         SubjectPublicKeyInfo clientKeyPairPubKeyInfo = null;
 
@@ -222,16 +247,7 @@ public class Certs {
         }
     }
 
-    /**
-     * Builds a netty SslContext for clients using the KeyStore, ClientCertificateHolder and
-     * ClientKeyPair. A new TrustManagerFactory will be created and initialised with the current
-     * KeyStore. If no KeyStore and no ClusterCertificate have been provided then an
-     * InsecureTrustManagerFactory will be used which will accept ANY certificate supplied by the
-     * GoshawkDB node: this is insecure - DO NOT USE THIS IN PRODUCTION. The ClientCertificateHolder
-     * and ClientKeyPair must have been set, either by calling them directly, or through calling
-     * parseClientPEM.
-     */
-    public SslContext buildClientSslContext() throws KeyStoreException, NoSuchAlgorithmException, CertificateException, SSLException {
+    SslContext buildClientSslContext() throws KeyStoreException, NoSuchAlgorithmException, SSLException {
         if (clientCertificateHolder == null || clientKeyPair == null) {
             throw new IllegalStateException("ClientCertificateHolder and ClientKeyPair must be provided");
         }
