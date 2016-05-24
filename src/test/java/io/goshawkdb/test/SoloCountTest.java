@@ -48,7 +48,6 @@ public class SoloCountTest extends TestBase {
         }
         final long end = System.nanoTime();
         System.out.println("Elapsed time: " + ((double) (end - start)) / 1000000D + "ms");
-        conn.close();
-        shutdownGracefully();
+        shutdown();
     }
 }
