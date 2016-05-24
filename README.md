@@ -38,12 +38,12 @@ connect, there are three environment variables to set:
   wish to set this to
   `"localhost:10001,localhost:10002,localhost:10003"`. The default is
   `"localhost"`
-* `GOSHAWKDB_CLUSTER_CLUSTER_CERT` This is a path to a file containing
+* `GOSHAWKDB_CLUSTER_CERT` This is a path to a file containing
   the cluster X.509 certificate which the client uses to authenticate
   the server. This file should contain the cluster certificate only,
   and *not* the cluster key pair. The default is
   [src/test/resources/defaultClusterCert.pem](src/test/resources/defaultClusterCert.pem)
-* `GOSHAWKDB_CLUSTER_CLIENT_KEYPAIR` This is a path to a file
+* `GOSHAWKDB_CLIENT_KEYPAIR` This is a path to a file
   containing a client X.509 certificate and key pair which the client
   uses to authenticate to the server. The default is
   [src/test/resources/defaultClientKeyPair.pem](src/test/resources/defaultClientKeyPair.pem)

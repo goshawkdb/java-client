@@ -38,9 +38,9 @@ distributions {
 test {
     maxParallelForks = 1
     environment(
+            'GOSHAWKDB_DEFAULT_CLUSTER_HOSTS': 'localhost',
             'GOSHAWKDB_DEFAULT_CLUSTER_CERT': projectDir.path.concat('/src/test/resources/defaultClusterCert.pem'),
-            'GOSHAWKDB_DEFAULT_CLIENT_KEYPAIR': projectDir.path.concat('/src/test/resources/defaultClientKeyPair.pem'),
-            'GOSHAWKDB_DEFAULT_CLUSTER_HOSTS': 'localhost'
+            'GOSHAWKDB_DEFAULT_CLIENT_KEYPAIR': projectDir.path.concat('/src/test/resources/defaultClientKeyPair.pem')
     )
 }
 
