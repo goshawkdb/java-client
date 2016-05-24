@@ -23,7 +23,7 @@ public class SoloCountTest extends TestBase {
 
     @Test
     public void test() throws Throwable {
-        final Connection conn = factory.connect(certs, "localhost", 10001);
+        final Connection conn = createConnections(1)[0];
         final long start = System.nanoTime();
         long expected = 0L;
         for (int idx = 0; idx < 1000; idx++) {
@@ -49,6 +49,6 @@ public class SoloCountTest extends TestBase {
         final long end = System.nanoTime();
         System.out.println("Elapsed time: " + ((double) (end - start)) / 1000000D + "ms");
         conn.close();
-        factory.group.shutdownGracefully();
+        shutdownGracefully();
     }
 }

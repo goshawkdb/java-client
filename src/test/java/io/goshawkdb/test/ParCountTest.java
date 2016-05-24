@@ -27,8 +27,9 @@ public class ParCountTest extends TestBase {
     @Test
     public void test() throws Throwable {
         final int threadCount = 8;
-        final Connection conn = factory.connect(certs, "localhost", 10001);
-        conn.runTransaction((txn) -> {
+        final Connection[] conns = createConnections(threadCount+1);
+        final Connection conn0 = conns[0];
+        conn0.runTransaction((txn) -> {
             final GoshawkObj[] roots = new GoshawkObj[threadCount];
             for (int threadIndex = 0; threadIndex < threadCount; threadIndex++) {
                 roots[threadIndex] = txn.createObject(ByteBuffer.allocate(0));
@@ -37,7 +38,7 @@ public class ParCountTest extends TestBase {
             root.setReferences(roots);
             return null;
         });
-        conn.close();
+        conn0.close();
 
         final ConcurrentLinkedDeque<Throwable> exceptionQueue = new ConcurrentLinkedDeque<>();
 
@@ -45,8 +46,8 @@ public class ParCountTest extends TestBase {
         for (int threadIndex = 0; threadIndex < threads.length; threadIndex++) {
             final int threadIndexCopy = threadIndex;
             final Thread t = new Thread(() -> {
+                final Connection c = conns[threadIndexCopy+1];
                 try {
-                    final Connection c = factory.connect(certs, "localhost", 10001);
                     final VarUUId rootId = c.runTransaction(txn ->
                             txn.getRoot().getReferences()[threadIndexCopy].id
                     );
@@ -79,7 +80,7 @@ public class ParCountTest extends TestBase {
                     exceptionQueue.add(e);
                 } finally {
                     try {
-                        conn.close();
+                        c.close();
                     } catch (InterruptedException e) {
                         exceptionQueue.add(e);
                     }
@@ -95,6 +96,6 @@ public class ParCountTest extends TestBase {
         if (t != null) {
             throw t;
         }
-        factory.group.shutdownGracefully();
+        shutdownGracefully();
     }
 }

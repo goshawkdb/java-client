@@ -1,5 +1,6 @@
 package io.goshawkdb.client;
 
+import java.net.InetAddress;
 import java.util.concurrent.TimeUnit;
 
 import io.netty.channel.EventLoopGroup;
@@ -49,6 +50,10 @@ public class ConnectionFactory {
      * @throws InterruptedException if an interruption occurs during connection
      */
     public Connection connect(final Certs certs, final String host) throws InterruptedException {
+        final String[] split = host.split(":");
+        if (split.length == 2 && split[1].matches("^\\d+$")) {
+            return connect(certs, split[0], Integer.valueOf(split[1]));
+        }
         return connect(certs, host, DEFAULT_PORT);
     }
 
