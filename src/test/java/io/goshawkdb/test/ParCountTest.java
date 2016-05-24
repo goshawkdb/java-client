@@ -29,7 +29,7 @@ public class ParCountTest extends TestBase {
     }
 
     @Test
-    public void test() throws Throwable {
+    public void parCount() throws Throwable {
         final int threadCount = 8;
         final TxnId origRootVsn = setRootToNZeroObjs(createConnections(1)[0], threadCount);
 

@@ -22,7 +22,7 @@ public class SoloCountTest extends TestBase {
     }
 
     @Test
-    public void test() throws Throwable {
+    public void soloCount() throws Throwable {
         final Connection conn = createConnections(1)[0];
         setRootToZeroInt64(conn);
         final long start = System.nanoTime();

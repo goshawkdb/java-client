@@ -23,7 +23,7 @@ public class PingPongTest extends TestBase {
     }
 
     @Test
-    public void test() throws Throwable {
+    public void pingPong() throws Throwable {
         final int limit = 1000;
         final int threadCount = 4;
         final TxnId origRootVsn = setRootToZeroInt64(createConnections(1)[0]);
