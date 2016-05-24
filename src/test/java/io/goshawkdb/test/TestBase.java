@@ -3,6 +3,7 @@ package io.goshawkdb.test;
 import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.security.InvalidKeyException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
@@ -18,6 +19,8 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import io.goshawkdb.client.Certs;
 import io.goshawkdb.client.Connection;
 import io.goshawkdb.client.ConnectionFactory;
+import io.goshawkdb.client.GoshawkObj;
+import io.goshawkdb.client.TxnId;
 
 public class TestBase {
 
@@ -90,6 +93,42 @@ public class TestBase {
         if (t != null) {
             throw t;
         }
+    }
+
+    /**
+     * Sets the root object to 8 0-bytes, with no references.
+     */
+    protected TxnId setRootToZeroInt64(final Connection c) throws Throwable {
+        return c.runTransaction(txn -> {
+            final GoshawkObj root = txn.getRoot();
+            root.set(ByteBuffer.allocate(8));
+            return root.getVersion();
+        }).result;
+    }
+
+    /**
+     * Creates n objects, each with 8 0-bytes as their value, and links to all of them from the root
+     * object, which has an empty value set.
+     */
+    protected TxnId setRootToNZeroObjs(final Connection c, final int n) throws Throwable {
+        return c.runTransaction(txn -> {
+            final GoshawkObj[] objs = new GoshawkObj[n];
+            for (int idx = 0; idx < n; idx++) {
+                objs[idx] = txn.createObject(ByteBuffer.allocate(8));
+            }
+            final GoshawkObj root = txn.getRoot();
+            root.set(ByteBuffer.allocate(0), objs);
+            return root.getVersion();
+        }).result;
+    }
+
+    protected TxnId awaitRootVersionChange(final Connection c, final TxnId oldVsn) throws Throwable {
+        return c.runTransaction(txn -> {
+            if (txn.getRoot().getVersion().equals(oldVsn)) {
+                txn.retry();
+            }
+            return null;
+        }).txnid;
     }
 
     protected void shutdown() throws InterruptedException {

@@ -13,6 +13,8 @@ import java.util.Iterator;
 import io.goshawkdb.client.capnp.ConnectionCap;
 import io.goshawkdb.client.capnp.TransactionCap;
 
+import static io.goshawkdb.client.ConnectionFactory.VERSION_ZERO;
+
 /**
  * An object of this type is supplied to {@link TransactionFun}s to provide access to the object
  * graph stored by GoshawkDB. {@link Transaction} must not be used outside of a transaction.
@@ -36,7 +38,7 @@ public class Transaction<Result> {
         this.parent = parent;
     }
 
-    Result run() throws Throwable {
+    TransactionResult<Result> run() throws Throwable {
         try {
             while (true) {
                 if (resetInProgress) {
@@ -59,14 +61,15 @@ public class Transaction<Result> {
                         throw TransactionRestartRequiredException.e;
                     }
                 } else if (parent == null) {
-                    if (submitToServer()) {
+                    final TxnId txnId = submitToServer();
+                    if (txnId == null) {
                         continue;
                     } else {
-                        return result;
+                        return new TransactionResult<>(result, txnId);
                     }
                 } else {
                     moveObjsToParent();
-                    return result;
+                    return new TransactionResult<>(result, null);
                 }
             }
         } finally {
@@ -225,7 +228,7 @@ public class Transaction<Result> {
         }
     }
 
-    private boolean submitToServer() {
+    private TxnId submitToServer() {
         final int s = objs.size();
         final ArrayList<ObjectState> reads = new ArrayList<>(s);
         final ArrayList<ObjectState> writes = new ArrayList<>(s);
@@ -245,7 +248,7 @@ public class Transaction<Result> {
         });
         final int totalLen = reads.size() + writes.size() + readwrites.size() + creates.size();
         if (totalLen == 0) {
-            return false;
+            return VERSION_ZERO;
         }
         final MessageBuilder msg = new MessageBuilder();
         final ConnectionCap.ClientMessage.Builder builder = msg.initRoot(ConnectionCap.ClientMessage.factory);
@@ -294,7 +297,11 @@ public class Transaction<Result> {
                 }
             }
         }
-        final TxnResult result = conn.submitTransaction(msg, cTxn);
-        return result.outcome.which() == TransactionCap.ClientTxnOutcome.Which.ABORT;
+        final TxnSubmissionResult result = conn.submitTransaction(msg, cTxn);
+        if (result.outcome.which() == TransactionCap.ClientTxnOutcome.Which.ABORT) {
+            return null;
+        } else {
+            return new TxnId(result.outcome.getFinalId().asByteBuffer());
+        }
     }
 }

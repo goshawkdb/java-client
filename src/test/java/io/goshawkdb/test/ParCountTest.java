@@ -17,6 +17,9 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 
 import io.goshawkdb.client.Connection;
 import io.goshawkdb.client.GoshawkObj;
+import io.goshawkdb.client.Transaction;
+import io.goshawkdb.client.TransactionResult;
+import io.goshawkdb.client.TxnId;
 import io.goshawkdb.client.VarUUId;
 
 public class ParCountTest extends TestBase {
@@ -29,41 +32,28 @@ public class ParCountTest extends TestBase {
     public void test() throws Throwable {
         final int threadCount = 8;
         final Connection conn0 = createConnections(1)[0];
-        conn0.runTransaction((txn) -> {
-            final GoshawkObj[] roots = new GoshawkObj[threadCount];
-            for (int threadIndex = 0; threadIndex < threadCount; threadIndex++) {
-                roots[threadIndex] = txn.createObject(ByteBuffer.allocate(0));
-            }
-            final GoshawkObj root = txn.getRoot();
-            root.setReferences(roots);
-            return null;
-        });
+        final TxnId origRootVsn = setRootToNZeroObjs(conn0, threadCount);
 
         inParallel(threadCount, (final int tId, final Connection c, final Queue<Throwable> exceptionQ) -> {
-            final VarUUId rootId = c.runTransaction(txn ->
+            awaitRootVersionChange(c, origRootVsn);
+            final VarUUId objId = c.runTransaction(txn ->
                     txn.getRoot().getReferences()[tId].id
-            );
+            ).result;
             final long start = System.nanoTime();
             long expected = 0L;
             for (int idx = 0; idx < 1000; idx++) {
-                final int idy = idx;
                 final long expectedCopy = expected;
                 expected = c.runTransaction((txn) -> {
-                    final GoshawkObj root = txn.getObject(rootId);
-                    if (idy == 0) {
-                        root.set(ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN).putLong(0));
-                        return 0L;
+                    final GoshawkObj obj = txn.getObject(objId);
+                    final long old = obj.getValue().order(ByteOrder.BIG_ENDIAN).getLong(0);
+                    if (old == expectedCopy) {
+                        final long val = old + 1;
+                        obj.set(ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN).putLong(0, val));
+                        return val;
                     } else {
-                        final long old = root.getValue().order(ByteOrder.BIG_ENDIAN).getLong(0);
-                        if (old == expectedCopy) {
-                            final long val = old + 1;
-                            root.set(ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN).putLong(0, val));
-                            return val;
-                        } else {
-                            throw new IllegalStateException("" + tId + ": Expected " + expectedCopy + " but found " + old);
-                        }
+                        throw new IllegalStateException("" + tId + ": Expected " + expectedCopy + " but found " + old);
                     }
-                });
+                }).result;
             }
             final long end = System.nanoTime();
             System.out.println("" + tId + ": Elapsed time: " + ((double) (end - start)) / 1000000D + "ms");

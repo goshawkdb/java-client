@@ -46,7 +46,7 @@ public class Connection {
     private final Bootstrap bootstrap;
     private final Cache cache = new Cache();
 
-    private TxnResult liveTxn = null;
+    private TxnSubmissionResult liveTxn = null;
 
     private final ChannelDuplexHandler txnSubmitter = new TxnSubmitter() {
         @Override
@@ -189,7 +189,7 @@ public class Connection {
      * @return The result of the transaction fuction.
      * @throws Throwable The transaction may through exceptions.
      */
-    public <Result> Result runTransaction(final TransactionFun<Result> fun) throws Throwable {
+    public <Result> TransactionResult<Result> runTransaction(final TransactionFun<Result> fun) throws Throwable {
         final VarUUId r;
         final Transaction oldTxn;
         synchronized (lock) {
@@ -268,7 +268,7 @@ public class Connection {
         }
     }
 
-    TxnResult submitTransaction(final MessageBuilder msg, final TransactionCap.ClientTxn.Builder cTxn) {
+    TxnSubmissionResult submitTransaction(final MessageBuilder msg, final TransactionCap.ClientTxn.Builder cTxn) {
         synchronized (lock) {
             if (state != State.Run) {
                 throw new IllegalStateException("Connection in wrong state: " + state);
@@ -280,7 +280,7 @@ public class Connection {
             byte[] txnIdArray = new byte[KEY_LEN];
             nameSpace.get(txnIdArray);
             cTxn.setId(txnIdArray);
-            final TxnResult result = new TxnResult();
+            final TxnSubmissionResult result = new TxnSubmissionResult();
             liveTxn = result;
             pipeline.addLast(txnSubmitter);
             pipeline.writeAndFlush(msg);
