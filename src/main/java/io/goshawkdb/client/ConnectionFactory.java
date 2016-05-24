@@ -45,14 +45,18 @@ public class ConnectionFactory {
      * Create and start a connection to a GoshawkDB node using the default port (7894)
      *
      * @param certs The certificates to use for mutual authentication
-     * @param host  The host to connect to (host name or IP address)
+     * @param host  The host to connect to (host name or IP address). This can be in host:port
+     *              format
      * @return a new connection
      * @throws InterruptedException if an interruption occurs during connection
      */
     public Connection connect(final Certs certs, final String host) throws InterruptedException {
-        final String[] split = host.split(":");
-        if (split.length == 2 && split[1].matches("^\\d+$")) {
-            return connect(certs, split[0], Integer.valueOf(split[1]));
+        final int idx = host.lastIndexOf(':');
+        if (idx != -1) {
+            final String portStr = host.substring(idx + 1);
+            if (portStr.matches("^\\d+$")) {
+                return connect(certs, host.substring(0, idx), Integer.valueOf(portStr));
+            }
         }
         return connect(certs, host, DEFAULT_PORT);
     }
