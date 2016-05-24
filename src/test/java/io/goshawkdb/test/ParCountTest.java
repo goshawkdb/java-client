@@ -31,8 +31,7 @@ public class ParCountTest extends TestBase {
     @Test
     public void test() throws Throwable {
         final int threadCount = 8;
-        final Connection conn0 = createConnections(1)[0];
-        final TxnId origRootVsn = setRootToNZeroObjs(conn0, threadCount);
+        final TxnId origRootVsn = setRootToNZeroObjs(createConnections(1)[0], threadCount);
 
         inParallel(threadCount, (final int tId, final Connection c, final Queue<Throwable> exceptionQ) -> {
             awaitRootVersionChange(c, origRootVsn);

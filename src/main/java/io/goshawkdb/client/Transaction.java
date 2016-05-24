@@ -219,7 +219,9 @@ public class Transaction<Result> {
         int idx = 0;
         while (stateIt.hasNext()) {
             final ObjectState state = stateIt.next();
-            actions.get(idx).initRead().setVersion(state.curVersion.id);
+            final TransactionCap.ClientAction.Builder action = actions.get(idx);
+            action.setVarId(state.obj.id.id);
+            action.initRead().setVersion(state.curVersion.id);
             idx++;
         }
         conn.submitTransaction(msg, cTxn);
