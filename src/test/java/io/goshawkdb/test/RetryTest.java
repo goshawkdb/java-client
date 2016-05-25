@@ -17,6 +17,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.goshawkdb.client.Connection;
 import io.goshawkdb.client.GoshawkObj;
+import io.goshawkdb.client.Transaction;
 import io.goshawkdb.client.TxnId;
 
 public class RetryTest extends TestBase {
@@ -47,7 +48,7 @@ public class RetryTest extends TestBase {
 
                 } else {
                     final AtomicBoolean triggered = new AtomicBoolean(false);
-                    final long found = c.runTransaction(txn -> {
+                    final long found = c.runTransaction((final Transaction<Long> txn) -> {
                         final long num = txn.getRoot().getValue().order(ByteOrder.BIG_ENDIAN).getLong(0);
                         if (num == 0) {
                             if (!triggered.get()) {
@@ -97,7 +98,7 @@ public class RetryTest extends TestBase {
 
                 } else {
                     final AtomicBoolean triggered = new AtomicBoolean(false);
-                    final int foundIdx = c.runTransaction(txn -> {
+                    final int foundIdx = c.runTransaction((final Transaction<Integer> txn) -> {
                         final GoshawkObj[] objs = txn.getRoot().getReferences();
                         for (int idx = 0; idx < objs.length; idx++) {
                             final GoshawkObj obj = objs[idx];

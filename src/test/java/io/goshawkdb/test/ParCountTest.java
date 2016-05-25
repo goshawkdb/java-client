@@ -36,14 +36,14 @@ public class ParCountTest extends TestBase {
 
             inParallel(threadCount, (final int tId, final Connection c, final Queue<Throwable> exceptionQ) -> {
                 awaitRootVersionChange(c, origRootVsn);
-                final VarUUId objId = c.runTransaction(txn ->
+                final VarUUId objId = c.runTransaction((final Transaction<VarUUId> txn) ->
                         txn.getRoot().getReferences()[tId].id
                 ).result;
                 final long start = System.nanoTime();
                 long expected = 0L;
                 for (int idx = 0; idx < 1000; idx++) {
                     final long expectedCopy = expected;
-                    expected = c.runTransaction((txn) -> {
+                    expected = c.runTransaction((final Transaction<Long> txn) -> {
                         final GoshawkObj obj = txn.getObject(objId);
                         final long old = obj.getValue().order(ByteOrder.BIG_ENDIAN).getLong(0);
                         if (old == expectedCopy) {

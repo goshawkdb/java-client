@@ -20,6 +20,7 @@ import io.goshawkdb.client.Certs;
 import io.goshawkdb.client.Connection;
 import io.goshawkdb.client.ConnectionFactory;
 import io.goshawkdb.client.GoshawkObj;
+import io.goshawkdb.client.Transaction;
 import io.goshawkdb.client.TxnId;
 
 public class TestBase {
@@ -99,7 +100,7 @@ public class TestBase {
      * Sets the root object to 8 0-bytes, with no references.
      */
     protected TxnId setRootToZeroInt64(final Connection c) throws Throwable {
-        return c.runTransaction(txn -> {
+        return c.runTransaction((final Transaction<TxnId> txn) -> {
             final GoshawkObj root = txn.getRoot();
             root.set(ByteBuffer.allocate(8));
             return root.getVersion();
@@ -111,7 +112,7 @@ public class TestBase {
      * object, which has an empty value set.
      */
     protected TxnId setRootToNZeroObjs(final Connection c, final int n) throws Throwable {
-        return c.runTransaction(txn -> {
+        return c.runTransaction((final Transaction<TxnId> txn) -> {
             final GoshawkObj[] objs = new GoshawkObj[n];
             for (int idx = 0; idx < n; idx++) {
                 objs[idx] = txn.createObject(ByteBuffer.allocate(8));

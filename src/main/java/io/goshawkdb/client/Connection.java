@@ -90,7 +90,7 @@ public class Connection {
     private ByteBuffer nameSpace;
     private long nextVarUUId;
     private long nextTxnId;
-    private Transaction txn;
+    private Transaction<?> txn;
 
     Connection(final ConnectionFactory cf, final Certs c, final String h, final int p) {
         port = p;
@@ -191,7 +191,7 @@ public class Connection {
      */
     public <Result> TransactionResult<Result> runTransaction(final TransactionFun<Result> fun) throws Throwable {
         final VarUUId r;
-        final Transaction oldTxn;
+        final Transaction<?> oldTxn;
         synchronized (lock) {
             if (root == null) {
                 throw new IllegalStateException("Unable to start transaction: root object not ready");

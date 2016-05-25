@@ -14,6 +14,7 @@ import java.security.spec.InvalidKeySpecException;
 
 import io.goshawkdb.client.Connection;
 import io.goshawkdb.client.GoshawkObj;
+import io.goshawkdb.client.Transaction;
 
 public class SoloCountTest extends TestBase {
 
@@ -30,7 +31,7 @@ public class SoloCountTest extends TestBase {
             long expected = 0L;
             for (int idx = 0; idx < 1000; idx++) {
                 final long expectedCopy = expected;
-                expected = conn.runTransaction((txn) -> {
+                expected = conn.runTransaction((final Transaction<Long> txn) -> {
                     final GoshawkObj root = txn.getRoot();
                     final long old = root.getValue().order(ByteOrder.BIG_ENDIAN).getLong(0);
                     if (old == expectedCopy) {

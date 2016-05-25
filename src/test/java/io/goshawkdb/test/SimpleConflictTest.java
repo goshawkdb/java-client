@@ -15,6 +15,7 @@ import java.util.Queue;
 
 import io.goshawkdb.client.Connection;
 import io.goshawkdb.client.GoshawkObj;
+import io.goshawkdb.client.Transaction;
 import io.goshawkdb.client.TxnId;
 
 public class SimpleConflictTest extends TestBase {
@@ -36,7 +37,7 @@ public class SimpleConflictTest extends TestBase {
                 final ByteBuffer buf = ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN);
                 while (expected <= limit) {
                     final long expectedCopy = expected;
-                    final long read = conn.runTransaction((txn) -> {
+                    final long read = conn.runTransaction((final Transaction<Long> txn) -> {
                         System.out.println("" + tId + ": starting with expected " + expectedCopy);
                         final GoshawkObj[] objs = txn.getRoot().getReferences();
                         final long val = objs[0].getValue().order(ByteOrder.BIG_ENDIAN).getLong(0);

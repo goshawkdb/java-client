@@ -15,6 +15,7 @@ import java.util.Queue;
 
 import io.goshawkdb.client.Connection;
 import io.goshawkdb.client.GoshawkObj;
+import io.goshawkdb.client.Transaction;
 import io.goshawkdb.client.TxnId;
 
 public class PingPongTest extends TestBase {
@@ -33,7 +34,7 @@ public class PingPongTest extends TestBase {
                 awaitRootVersionChange(c, origRootVsn);
                 boolean inProgress = true;
                 while (inProgress) {
-                    inProgress = c.runTransaction(txn -> {
+                    inProgress = c.runTransaction((final Transaction<Boolean> txn) -> {
                         final GoshawkObj root = txn.getRoot();
                         final long val = root.getValue().order(ByteOrder.BIG_ENDIAN).getLong(0);
                         if (val > limit) {

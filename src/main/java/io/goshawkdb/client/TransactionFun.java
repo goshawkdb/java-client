@@ -15,5 +15,5 @@ public interface TransactionFun<Result> {
      * @throws Throwable your callback may throw an exception, for example to indicate you wish the
      *                   transaction to be aborted.
      */
-    Result Run(final Transaction txn) throws Throwable;
+    Result Run(final Transaction<Result> txn) throws Throwable;
 }

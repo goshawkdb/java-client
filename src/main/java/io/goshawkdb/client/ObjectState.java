@@ -9,7 +9,7 @@ class ObjectState {
     final GoshawkObj obj;
 
     ObjectState parent = null;
-    Transaction transaction = null;
+    Transaction<?> transaction = null;
     TxnId curVersion = null;
     ByteBuffer curValue = null;
     GoshawkObj[] curObjectRefs = null;
@@ -18,7 +18,7 @@ class ObjectState {
     boolean read = false;
     boolean write = false;
 
-    ObjectState(GoshawkObj gObj, Transaction txn, ByteBuffer val, GoshawkObj[] refs, boolean created) {
+    ObjectState(GoshawkObj gObj, Transaction<?> txn, ByteBuffer val, GoshawkObj[] refs, boolean created) {
         obj = gObj;
         create = created;
         transaction = txn;
@@ -31,13 +31,13 @@ class ObjectState {
         }
     }
 
-    ObjectState(GoshawkObj gObj, Transaction txn) {
+    ObjectState(GoshawkObj gObj, Transaction<?> txn) {
         obj = gObj;
         create = false;
         transaction = txn;
     }
 
-    ObjectState clone(Transaction txn) {
+    ObjectState clone(Transaction<?> txn) {
         final ObjectState os = new ObjectState(obj, txn, curValue, curObjectRefs, create);
         os.parent = this;
         os.curVersion = curVersion;

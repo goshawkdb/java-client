@@ -30,7 +30,7 @@ public class Transaction<Result> {
 
     boolean resetInProgress = false;
 
-    Transaction(final TransactionFun<Result> fun, final Connection conn, Cache cache, final VarUUId root, final Transaction parent) {
+    Transaction(final TransactionFun<Result> fun, final Connection conn, Cache cache, final VarUUId root, final Transaction<?> parent) {
         this.fun = fun;
         this.conn = conn;
         this.cache = cache;
@@ -202,7 +202,7 @@ public class Transaction<Result> {
     private void submitRetryTransaction() {
         final HashMap<VarUUId, ObjectState> reads = new HashMap<>();
         for (Transaction<?> ancestor = this; ancestor != null; ancestor = ancestor.parent) {
-            final Transaction ancestorFinal = ancestor;
+            final Transaction<?> ancestorFinal = ancestor;
             final HashMap<VarUUId, GoshawkObj> objs = ancestor.objs;
             objs.forEach((final VarUUId vUUId, final GoshawkObj obj) -> {
                 if (obj.state.transaction == ancestorFinal && obj.state.read) {
@@ -225,7 +225,7 @@ public class Transaction<Result> {
             idx++;
         }
         conn.submitTransaction(msg, cTxn);
-        for (Transaction ancestor = this; ancestor != null; ancestor = ancestor.parent) {
+        for (Transaction<?> ancestor = this; ancestor != null; ancestor = ancestor.parent) {
             ancestor.resetInProgress = true;
         }
     }
