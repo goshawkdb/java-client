@@ -24,31 +24,33 @@ public class PingPongTest extends TestBase {
 
     @Test
     public void pingPong() throws Throwable {
-        final int limit = 1000;
-        final int threadCount = 4;
-        final TxnId origRootVsn = setRootToZeroInt64(createConnections(1)[0]);
+        try {
+            final int limit = 1000;
+            final int threadCount = 4;
+            final TxnId origRootVsn = setRootToZeroInt64(createConnections(1)[0]);
 
-        inParallel(threadCount, (final int tId, final Connection c, final Queue<Throwable> exceptionQ) -> {
-            awaitRootVersionChange(c, origRootVsn);
-            boolean inProgress = true;
-            while (inProgress) {
-                inProgress = c.runTransaction(txn -> {
-                    final GoshawkObj root = txn.getRoot();
-                    final long val = root.getValue().order(ByteOrder.BIG_ENDIAN).getLong(0);
-                    if (val > limit) {
-                        return false;
-                    } else if (val % threadCount == tId) {
-                        System.out.println("" + tId + " incrementing at " + val);
-                        root.set(ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN).putLong(0, val + 1));
-                    } else {
-                        txn.retry();
-                        throw new IllegalStateException("Reached unreachable code!");
-                    }
-                    return true;
-                }).result;
-            }
-        });
-
-        shutdown();
+            inParallel(threadCount, (final int tId, final Connection c, final Queue<Throwable> exceptionQ) -> {
+                awaitRootVersionChange(c, origRootVsn);
+                boolean inProgress = true;
+                while (inProgress) {
+                    inProgress = c.runTransaction(txn -> {
+                        final GoshawkObj root = txn.getRoot();
+                        final long val = root.getValue().order(ByteOrder.BIG_ENDIAN).getLong(0);
+                        if (val > limit) {
+                            return false;
+                        } else if (val % threadCount == tId) {
+                            System.out.println("" + tId + " incrementing at " + val);
+                            root.set(ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN).putLong(0, val + 1));
+                        } else {
+                            txn.retry();
+                            throw new IllegalStateException("Reached unreachable code!");
+                        }
+                        return true;
+                    }).result;
+                }
+            });
+        } finally {
+            shutdown();
+        }
     }
 }

@@ -23,26 +23,29 @@ public class SoloCountTest extends TestBase {
 
     @Test
     public void soloCount() throws Throwable {
-        final Connection conn = createConnections(1)[0];
-        setRootToZeroInt64(conn);
-        final long start = System.nanoTime();
-        long expected = 0L;
-        for (int idx = 0; idx < 1000; idx++) {
-            final long expectedCopy = expected;
-            expected = conn.runTransaction((txn) -> {
-                final GoshawkObj root = txn.getRoot();
-                final long old = root.getValue().order(ByteOrder.BIG_ENDIAN).getLong(0);
-                if (old == expectedCopy) {
-                    final long val = old + 1;
-                    root.set(ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN).putLong(0, val));
-                    return val;
-                } else {
-                    throw new IllegalStateException("Expected " + expectedCopy + " but found " + old);
-                }
-            }).result;
+        try {
+            final Connection conn = createConnections(1)[0];
+            setRootToZeroInt64(conn);
+            final long start = System.nanoTime();
+            long expected = 0L;
+            for (int idx = 0; idx < 1000; idx++) {
+                final long expectedCopy = expected;
+                expected = conn.runTransaction((txn) -> {
+                    final GoshawkObj root = txn.getRoot();
+                    final long old = root.getValue().order(ByteOrder.BIG_ENDIAN).getLong(0);
+                    if (old == expectedCopy) {
+                        final long val = old + 1;
+                        root.set(ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN).putLong(0, val));
+                        return val;
+                    } else {
+                        throw new IllegalStateException("Expected " + expectedCopy + " but found " + old);
+                    }
+                }).result;
+            }
+            final long end = System.nanoTime();
+            System.out.println("Elapsed time: " + ((double) (end - start)) / 1000000D + "ms");
+        } finally {
+            shutdown();
         }
-        final long end = System.nanoTime();
-        System.out.println("Elapsed time: " + ((double) (end - start)) / 1000000D + "ms");
-        shutdown();
     }
 }
