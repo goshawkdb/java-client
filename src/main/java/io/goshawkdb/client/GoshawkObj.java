@@ -4,6 +4,7 @@ import org.capnproto.MessageBuilder;
 import org.capnproto.StructList;
 
 import java.nio.ByteBuffer;
+import java.util.List;
 
 import io.goshawkdb.client.capnp.ConnectionCap;
 import io.goshawkdb.client.capnp.TransactionCap;
@@ -145,7 +146,7 @@ public class GoshawkObj {
         }
         Cache.ValueRef valueRef = state.transaction.cache.get(id);
         if (valueRef == null) {
-            final VarUUId[] modifiedVars = loadVar(id, conn);
+            final List<VarUUId> modifiedVars = loadVar(id, conn);
             if (state.transaction.varsUpdated(modifiedVars)) {
                 throw TransactionRestartRequiredException.e;
             }
@@ -176,7 +177,7 @@ public class GoshawkObj {
         }
     }
 
-    private static VarUUId[] loadVar(final VarUUId vUUId, final Connection conn) {
+    private static List<VarUUId> loadVar(final VarUUId vUUId, final Connection conn) {
         final MessageBuilder msg = new MessageBuilder();
         final ConnectionCap.ClientMessage.Builder builder = msg.initRoot(ConnectionCap.ClientMessage.factory);
         final TransactionCap.ClientTxn.Builder cTxn = builder.initClientTxnSubmission();

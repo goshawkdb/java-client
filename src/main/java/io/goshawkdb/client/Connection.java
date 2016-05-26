@@ -310,7 +310,7 @@ public class Connection {
                     break;
                 }
                 case ABORT: {
-                    cache.updateFromTxnAbort(result.outcome.getAbort());
+                    result.modifiedVars = cache.updateFromTxnAbort(result.outcome.getAbort());
                     break;
                 }
                 case ERROR: {

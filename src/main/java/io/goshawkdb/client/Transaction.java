@@ -9,6 +9,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 
 import io.goshawkdb.client.capnp.ConnectionCap;
 import io.goshawkdb.client.capnp.TransactionCap;
@@ -158,7 +159,7 @@ public class Transaction<Result> {
         }
     }
 
-    boolean varsUpdated(final VarUUId[] modifiedVars) {
+    boolean varsUpdated(final List<VarUUId> modifiedVars) {
         if (parent != null && parent.varsUpdated(modifiedVars)) {
             resetInProgress = true;
             return true;
@@ -210,21 +211,23 @@ public class Transaction<Result> {
                 }
             });
         }
-        final MessageBuilder msg = new MessageBuilder();
-        final ConnectionCap.ClientMessage.Builder builder = msg.initRoot(ConnectionCap.ClientMessage.factory);
-        final TransactionCap.ClientTxn.Builder cTxn = builder.initClientTxnSubmission();
-        cTxn.setRetry(true);
-        final StructList.Builder<TransactionCap.ClientAction.Builder> actions = cTxn.initActions(reads.size());
-        final Iterator<ObjectState> stateIt = reads.values().iterator();
-        int idx = 0;
-        while (stateIt.hasNext()) {
-            final ObjectState state = stateIt.next();
-            final TransactionCap.ClientAction.Builder action = actions.get(idx);
-            action.setVarId(state.obj.id.id);
-            action.initRead().setVersion(state.curVersion.id);
-            idx++;
+        if (reads.size() > 0) {
+            final MessageBuilder msg = new MessageBuilder();
+            final ConnectionCap.ClientMessage.Builder builder = msg.initRoot(ConnectionCap.ClientMessage.factory);
+            final TransactionCap.ClientTxn.Builder cTxn = builder.initClientTxnSubmission();
+            cTxn.setRetry(true);
+            final StructList.Builder<TransactionCap.ClientAction.Builder> actions = cTxn.initActions(reads.size());
+            final Iterator<ObjectState> stateIt = reads.values().iterator();
+            int idx = 0;
+            while (stateIt.hasNext()) {
+                final ObjectState state = stateIt.next();
+                final TransactionCap.ClientAction.Builder action = actions.get(idx);
+                action.setVarId(state.obj.id.id);
+                action.initRead().setVersion(state.curVersion.id);
+                idx++;
+            }
+            conn.submitTransaction(msg, cTxn);
         }
-        conn.submitTransaction(msg, cTxn);
         for (Transaction<?> ancestor = this; ancestor != null; ancestor = ancestor.parent) {
             ancestor.resetInProgress = true;
         }

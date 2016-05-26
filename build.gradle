@@ -1,6 +1,7 @@
 
 apply plugin: 'java'
 apply plugin: 'java-library-distribution'
+apply plugin: "jacoco"
 
 version = '0.2'
 
@@ -32,6 +33,14 @@ distributions {
         contents {
             from('LICENSE')
         }
+    }
+}
+
+jacocoTestReport {
+    reports {
+        xml.enabled false
+        csv.enabled false
+        html.destination "${buildDir}/jacocoHtml"
     }
 }
 
