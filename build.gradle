@@ -1,9 +1,11 @@
-
 apply plugin: 'java'
 apply plugin: 'java-library-distribution'
-apply plugin: "jacoco"
+apply plugin: 'jacoco'
+apply plugin: 'maven'
 
 version = '0.2'
+group = 'io.goshawkdb'
+archivesBaseName = "goshawkdb-client"
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
@@ -21,7 +23,7 @@ jar {
     manifest {
         from('MANIFEST.MF')
         attributes("Specification-Version": version,
-                   "Implementation-Version": version)
+                "Implementation-Version": version)
     }
     into('META-INF') {
         from('LICENSE')
@@ -42,6 +44,69 @@ jacocoTestReport {
         csv.enabled false
         html.destination "${buildDir}/jacocoHtml"
     }
+}
+
+uploadArchives {
+    repositories {
+        mavenDeployer {
+            repository(url: "file://localhost/tmp/myRepo/")
+            pom.project {
+                name 'GoshawkDB Java Client'
+                packaging 'jar'
+                description 'The Java Client for GoshawkDB'
+                url = 'https://goshawkdb.io/'
+
+                licenses {
+                    license {
+                        name 'The Apache Software License, Version 2.0'
+                        url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                        distribution 'repo'
+                    }
+                }
+
+                developers {
+                    developer {
+                        name = 'Matthew Sackman'
+                        email = 'matthew@goshawkdb.io'
+                        organization = 'GoshawkDB'
+                        organizationUrl = 'https://goshawkdb.io/'
+                    }
+                }
+
+                scm {
+                    connection 'scm:hg:https://src.goshawkdb.io/java-client/'
+                    developerConnection 'scm:hg:https://src.goshawkdb.io/java-client/'
+                    url 'https://src.goshawkdb.io/java-client/'
+                }
+            }
+        }
+    }
+}
+
+task javadocJar(type: Jar) {
+    classifier = 'javadoc'
+    from javadoc
+    manifest {
+        from jar.manifest
+    }
+    into('META-INF') {
+        from('LICENSE')
+    }
+}
+
+task sourcesJar(type: Jar) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+    manifest {
+        from jar.manifest
+    }
+    into('META-INF') {
+        from('LICENSE')
+    }
+}
+
+artifacts {
+    archives javadocJar, sourcesJar
 }
 
 test {

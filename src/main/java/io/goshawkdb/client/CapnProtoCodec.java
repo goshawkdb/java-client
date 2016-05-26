@@ -21,18 +21,18 @@ final class CapnProtoCodec extends ByteToMessageCodec<MessageBuilder> {
 
     private final Connection conn;
 
-    CapnProtoCodec(Connection connection) {
+    CapnProtoCodec(final Connection connection) {
         conn = connection;
     }
 
     @Override
-    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+    public void channelInactive(final ChannelHandlerContext ctx) throws Exception {
         conn.disconnected();
         super.channelInactive(ctx);
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, MessageBuilder msg, ByteBuf out) throws Exception {
+    protected void encode(final ChannelHandlerContext ctx, final MessageBuilder msg, final ByteBuf out) throws Exception {
         final ByteBuffer[] segments = msg.getSegmentsForOutput();
         out.writeIntLE(segments.length - 1);
 
@@ -44,7 +44,7 @@ final class CapnProtoCodec extends ByteToMessageCodec<MessageBuilder> {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+    protected void decode(final ChannelHandlerContext ctx, final ByteBuf in, final List<Object> out) throws Exception {
         int available = in.readableBytes();
         if (available < 4) {
             return;
