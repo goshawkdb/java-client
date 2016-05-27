@@ -34,21 +34,22 @@ public class GoshawkObj {
     /**
      * Returns the current value of this object.
      *
-     * @return The current value. The returned buffer is read only and will have current position of
-     * 0.
+     * @return The current value. The returned buffer is a copy of the underlying buffer, so
+     * modifying it is perfectly safe. If you do modify it, you will need to call one of the set
+     * methods for your modifications to take any effect.
      */
     public ByteBuffer getValue() {
         checkExpired();
         maybeRecordRead(false);
-        final ByteBuffer buf = state.curValue.asReadOnlyBuffer();
-        buf.rewind();
-        return buf;
+        return cloneByteBuffer(state.curValue);
     }
 
     /**
      * Get the objects pointed to from the current object.
      *
-     * @return the list of {@link GoshawkObj} to which the current object refers.
+     * @return the array of {@link GoshawkObj} to which the current object refers. As with getValue,
+     * the array is a copy of the underlying array, so you are safe to modify it, but you will need
+     * to call one of the set methods for your modifications to take any effect.
      */
     public GoshawkObj[] getReferences() {
         checkExpired();
@@ -81,9 +82,12 @@ public class GoshawkObj {
      *
      * @param value      The value to set the object to. The buffer will be cloned and the contents
      *                   copied. Therefore any changes you make to this param after calling this
-     *                   method will be ignored. The value is taken to be from position 0 to the
-     *                   current limit of the buffer.
-     * @param references The new list of objects to which the current object refers.
+     *                   method will be ignored (you will need to call a set method again). The
+     *                   copying will not alter any position, limit, capacity or marks of the value
+     *                   ByteBuffer. The value is taken to be from position 0 to the current limit
+     *                   of the buffer.
+     * @param references The new list of objects to which the current object refers. Again, the
+     *                   array of references is copied.
      */
     public void set(final ByteBuffer value, final GoshawkObj... references) {
         if (value == null || references == null) {
@@ -91,7 +95,11 @@ public class GoshawkObj {
         }
         checkExpired();
         state.write = true;
-        state.curValue = cloneByteBuffer(value);
+        state.curValue = cloneByteBuffer(value).asReadOnlyBuffer();
+        if (state.curValueRef != null) {
+            state.curValueRef.release();
+            state.curValueRef = null;
+        }
         state.curObjectRefs = new GoshawkObj[references.length];
         System.arraycopy(references, 0, state.curObjectRefs, 0, references.length);
     }
@@ -104,8 +112,9 @@ public class GoshawkObj {
      *
      * @param value The value to set the object to. The buffer will be cloned and the contents
      *              copied. Therefore any changes you make to this param after calling this method
-     *              will be ignored. The value is taken to be from position 0 to the current limit
-     *              of the buffer.
+     *              will be ignored (you will need to call a set method again). The copying will not
+     *              alter any position, limit, capacity or marks of the value ByteBuffer. The value
+     *              is taken to be from position 0 to the current limit of the buffer.
      */
     public void setValue(final ByteBuffer value) {
         if (value == null) {
@@ -113,7 +122,11 @@ public class GoshawkObj {
         }
         checkExpired();
         state.write = true;
-        state.curValue = cloneByteBuffer(value);
+        state.curValue = cloneByteBuffer(value).asReadOnlyBuffer();
+        if (state.curValueRef != null) {
+            state.curValueRef.release();
+            state.curValueRef = null;
+        }
         if (state.curObjectRefs == null) {
             state.curObjectRefs = new GoshawkObj[0];
         }
@@ -125,7 +138,8 @@ public class GoshawkObj {
      * otherwise on retrieval you will not be able to navigate to them. Note that the order of
      * references is stable.
      *
-     * @param references The new list of objects to which the current object refers.
+     * @param references The new list of objects to which the current object refers. The array of
+     *                   references is copied.
      */
     public void setReferences(final GoshawkObj... references) {
         if (references == null) {
@@ -133,10 +147,10 @@ public class GoshawkObj {
         }
         checkExpired();
         state.write = true;
-        state.curObjectRefs = new GoshawkObj[references.length];
         if (state.curValue == null) {
             state.curValue = ByteBuffer.allocate(0);
         }
+        state.curObjectRefs = new GoshawkObj[references.length];
         System.arraycopy(references, 0, state.curObjectRefs, 0, references.length);
     }
 
@@ -159,6 +173,13 @@ public class GoshawkObj {
         state.curVersion = valueRef.version;
         if (!state.write) {
             state.curValue = valueRef.value.duplicate();
+            if (state.curValueRef != null) {
+                state.curValueRef.release();
+            }
+            state.curValueRef = valueRef.reader;
+            if (state.curValueRef != null) {
+                state.curValueRef.retain();
+            }
             final GoshawkObj[] refs = new GoshawkObj[valueRef.references.length];
             int idx = 0;
             for (VarUUId vUUId : valueRef.references) {
@@ -199,7 +220,7 @@ public class GoshawkObj {
         final ByteBuffer readOnlyCopy = buf.asReadOnlyBuffer();
         readOnlyCopy.rewind();
         clone.put(readOnlyCopy);
+        clone.rewind();
         return clone;
     }
-
 }

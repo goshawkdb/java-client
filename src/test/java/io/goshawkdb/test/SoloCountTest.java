@@ -33,10 +33,11 @@ public class SoloCountTest extends TestBase {
                 final long expectedCopy = expected;
                 expected = conn.runTransaction((final Transaction<Long> txn) -> {
                     final GoshawkObj root = txn.getRoot();
-                    final long old = root.getValue().order(ByteOrder.BIG_ENDIAN).getLong(0);
+                    final ByteBuffer valBuf = root.getValue().order(ByteOrder.BIG_ENDIAN);
+                    final long old = valBuf.getLong(0);
                     if (old == expectedCopy) {
                         final long val = old + 1;
-                        root.set(ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN).putLong(0, val));
+                        root.set(valBuf.putLong(0, val));
                         return val;
                     } else {
                         throw new IllegalStateException("Expected " + expectedCopy + " but found " + old);

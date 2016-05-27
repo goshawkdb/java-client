@@ -43,13 +43,14 @@ final class Heartbeater extends ChannelDuplexHandler implements TimerTask {
 
     @Override
     public void channelRead(final ChannelHandlerContext ctx, final Object msg) throws Exception {
-        if (msg instanceof MessageReader) {
+        if (msg instanceof MessageReaderRefCount) {
             synchronized (lock) {
                 missedHeartbeats = 0;
             }
-            final MessageReader read = (MessageReader) msg;
-            final ConnectionCap.ClientMessage.Reader h = read.getRoot(ConnectionCap.ClientMessage.factory);
+            final MessageReaderRefCount read = (MessageReaderRefCount) msg;
+            final ConnectionCap.ClientMessage.Reader h = read.msg.getRoot(ConnectionCap.ClientMessage.factory);
             if (h != null && h.isHeartbeat()) {
+                read.release();
                 return;
             }
         }
@@ -68,7 +69,7 @@ final class Heartbeater extends ChannelDuplexHandler implements TimerTask {
     public void run(final Timeout t) throws Exception {
         synchronized (lock) {
             if (missedHeartbeats == 2) {
-                System.out.println("Too many missing heartbeats");
+                System.out.println("Too many missing heartbeats. Closing connection.");
                 if (context != null) {
                     context.channel().close();
                 }

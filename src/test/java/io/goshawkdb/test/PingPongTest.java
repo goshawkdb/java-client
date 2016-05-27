@@ -36,12 +36,13 @@ public class PingPongTest extends TestBase {
                 while (inProgress) {
                     inProgress = c.runTransaction((final Transaction<Boolean> txn) -> {
                         final GoshawkObj root = txn.getRoot();
-                        final long val = root.getValue().order(ByteOrder.BIG_ENDIAN).getLong(0);
+                        final ByteBuffer valBuf = root.getValue().order(ByteOrder.BIG_ENDIAN);
+                        final long val = valBuf.getLong(0);
                         if (val > limit) {
                             return false;
                         } else if (val % threadCount == tId) {
                             System.out.println("" + tId + " incrementing at " + val);
-                            root.set(ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN).putLong(0, val + 1));
+                            root.set(valBuf.putLong(0, val + 1));
                         } else {
                             txn.retry();
                             throw new IllegalStateException("Reached unreachable code!");

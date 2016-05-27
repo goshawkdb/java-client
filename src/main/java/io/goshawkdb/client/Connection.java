@@ -51,9 +51,9 @@ public class Connection {
     private final ChannelDuplexHandler txnSubmitter = new TxnSubmitter() {
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-            if (msg instanceof MessageReader) {
-                MessageReader read = (MessageReader) msg;
-                final ConnectionCap.ClientMessage.Reader result = read.getRoot(ConnectionCap.ClientMessage.factory);
+            if (msg instanceof MessageReaderRefCount) {
+                MessageReaderRefCount read = (MessageReaderRefCount) msg;
+                final ConnectionCap.ClientMessage.Reader result = read.msg.getRoot(ConnectionCap.ClientMessage.factory);
                 if (result.isClientTxnOutcome()) {
                     ctx.pipeline().remove(this);
                     final TransactionCap.ClientTxnOutcome.Reader outcome = result.getClientTxnOutcome();
@@ -62,6 +62,7 @@ public class Connection {
                             throw new IllegalStateException("Received txn outcome for unknown txn");
                         }
                         liveTxn.outcome = outcome;
+                        liveTxn.reader = read;
                         liveTxn = null;
                         lock.notifyAll();
                     }
@@ -247,6 +248,7 @@ public class Connection {
     void disconnected() {
         synchronized (lock) {
             root = null;
+            cache.clear();
             lock.notifyAll();
         }
     }
@@ -306,15 +308,21 @@ public class Connection {
             final TxnId finalTxnId = new TxnId(finalTxnIdBuf);
             switch (result.outcome.which()) {
                 case COMMIT: {
+                    result.reader.release();
                     cache.updateFromTxnCommit(cTxn.asReader(), finalTxnId);
                     break;
                 }
                 case ABORT: {
-                    result.modifiedVars = cache.updateFromTxnAbort(result.outcome.getAbort());
+                    result.modifiedVars = cache.updateFromTxnAbort(result.outcome.getAbort(), result.reader);
+                    result.reader.release();
                     break;
                 }
                 case ERROR: {
-                    throw new IllegalStateException(result.outcome.getError().toString());
+                    try {
+                        throw new IllegalStateException(result.outcome.getError().toString());
+                    } finally {
+                        result.reader.release();
+                    }
                 }
             }
             return result;

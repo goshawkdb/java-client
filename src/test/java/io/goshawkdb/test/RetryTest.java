@@ -53,10 +53,14 @@ public class RetryTest extends TestBase {
                         if (num == 0) {
                             if (!triggered.get()) {
                                 triggered.set(true);
+                                System.out.println("" + tId + ": going to retry (wasn't triggered).");
                                 retryLatch.countDown();
+                            } else {
+                                System.out.println("" + tId + ": going to retry (was triggered).");
                             }
-                            System.out.println("" + tId + ": going to retry.");
                             txn.retry();
+                        } else if (!triggered.get()) {
+                            throw new IllegalStateException("" + tId + ": found " + num + " before I triggered!");
                         }
                         System.out.println("" + tId + ": found non-zero: " + num);
                         return num;

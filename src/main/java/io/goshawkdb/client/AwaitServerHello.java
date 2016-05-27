@@ -1,7 +1,5 @@
 package io.goshawkdb.client;
 
-import org.capnproto.MessageReader;
-
 import io.goshawkdb.client.capnp.ConnectionCap;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -16,13 +14,17 @@ final class AwaitServerHello extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelRead(final ChannelHandlerContext ctx, final Object msg) throws Exception {
-        if (msg instanceof MessageReader) {
-            final MessageReader read = (MessageReader) msg;
-            final ConnectionCap.HelloClientFromServer.Reader hello = read.getRoot(ConnectionCap.HelloClientFromServer.factory);
+        if (msg instanceof MessageReaderRefCount) {
+            final MessageReaderRefCount read = (MessageReaderRefCount) msg;
+            final ConnectionCap.HelloClientFromServer.Reader hello = read.msg.getRoot(ConnectionCap.HelloClientFromServer.factory);
             if (hello != null && hello.hasRootId()) {
                 ctx.pipeline().remove(this);
-                conn.serverHello(hello, ctx);
-                return;
+                try {
+                    conn.serverHello(hello, ctx);
+                    return;
+                } finally {
+                    read.release();
+                }
             }
         }
         super.channelRead(ctx, msg);

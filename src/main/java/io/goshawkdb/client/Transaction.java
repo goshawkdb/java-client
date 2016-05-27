@@ -115,7 +115,7 @@ public class Transaction<Result> {
         }
         final GoshawkObj obj = new GoshawkObj(conn.nextVarUUId(), conn);
         objs.put(obj.id, obj);
-        obj.state = new ObjectState(obj, this, value, references, true);
+        obj.state = new ObjectState(obj, this, value, null, references, true);
         return obj;
     }
 
@@ -180,6 +180,9 @@ public class Transaction<Result> {
     private void resetObjects() {
         objs.forEach((final VarUUId vUUId, final GoshawkObj obj) -> {
             if (obj.state.transaction == this) {
+                if (obj.state.curValueRef != null) {
+                    obj.state.curValueRef.release();
+                }
                 obj.state = obj.state.parent;
             }
         });
@@ -193,6 +196,9 @@ public class Transaction<Result> {
             if (state.transaction == this) {
                 state.transaction = parent;
                 if (state.parent != null && state.parent.transaction == parent) {
+                    if (state.parent.curValueRef != null) {
+                        state.parent.curValueRef.release();
+                    }
                     state.parent = state.parent.parent;
                 }
                 pObjs.putIfAbsent(vUUId, obj);

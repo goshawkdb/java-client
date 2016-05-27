@@ -8,6 +8,7 @@ class TxnSubmissionResult {
 
     TransactionCap.ClientTxnOutcome.Reader outcome;
     List<VarUUId> modifiedVars;
+    MessageReaderRefCount reader;
 
     TxnSubmissionResult() {
     }

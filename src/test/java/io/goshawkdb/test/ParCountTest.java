@@ -45,10 +45,11 @@ public class ParCountTest extends TestBase {
                     final long expectedCopy = expected;
                     expected = c.runTransaction((final Transaction<Long> txn) -> {
                         final GoshawkObj obj = txn.getObject(objId);
-                        final long old = obj.getValue().order(ByteOrder.BIG_ENDIAN).getLong(0);
+                        final ByteBuffer valBuf = obj.getValue().order(ByteOrder.BIG_ENDIAN);
+                        final long old = valBuf.getLong(0);
                         if (old == expectedCopy) {
                             final long val = old + 1;
-                            obj.set(ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN).putLong(0, val));
+                            obj.set(valBuf.putLong(0, val));
                             return val;
                         } else {
                             throw new IllegalStateException("" + tId + ": Expected " + expectedCopy + " but found " + old);

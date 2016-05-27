@@ -17,12 +17,22 @@ final class Cache {
         TxnId version;
         ByteBuffer value;
         VarUUId[] references;
+        MessageReaderRefCount reader;
     }
 
     private final Object lock = new Object();
     private final HashMap<VarUUId, ValueRef> m = new HashMap<>();
 
     Cache() {
+    }
+
+    void clear() {
+        m.forEach(((varUUId, valueRef) -> {
+            if (valueRef.reader != null) {
+                valueRef.reader.release();
+            }
+        }));
+        m.clear();
     }
 
     ValueRef get(final VarUUId vUUId) {
@@ -41,19 +51,19 @@ final class Cache {
                     case WRITE: {
                         final TransactionCap.ClientAction.Write.Reader write = action.getWrite();
                         final DataList.Reader refs = write.getReferences();
-                        updateFromWrite(txnId, vUUId, write.getValue(), refs);
+                        updateFromWrite(txnId, vUUId, write.getValue(), refs, null);
                         break;
                     }
                     case READWRITE: {
                         final TransactionCap.ClientAction.Readwrite.Reader rw = action.getReadwrite();
                         final DataList.Reader refs = rw.getReferences();
-                        updateFromWrite(txnId, vUUId, rw.getValue(), refs);
+                        updateFromWrite(txnId, vUUId, rw.getValue(), refs, null);
                         break;
                     }
                     case CREATE: {
                         final TransactionCap.ClientAction.Create.Reader create = action.getCreate();
                         final DataList.Reader refs = create.getReferences();
-                        updateFromWrite(txnId, vUUId, create.getValue(), refs);
+                        updateFromWrite(txnId, vUUId, create.getValue(), refs, null);
                         break;
                     }
                 }
@@ -61,7 +71,7 @@ final class Cache {
         }
     }
 
-    List<VarUUId> updateFromTxnAbort(final StructList.Reader<TransactionCap.ClientUpdate.Reader> updates) {
+    List<VarUUId> updateFromTxnAbort(final StructList.Reader<TransactionCap.ClientUpdate.Reader> updates, final MessageReaderRefCount reader) {
         final ArrayList<VarUUId> modifiedVars = new ArrayList<>(updates.size());
         final Iterator<TransactionCap.ClientUpdate.Reader> updatesIt = updates.iterator();
         synchronized (lock) {
@@ -81,7 +91,7 @@ final class Cache {
                             // version TxnId).
                             final TransactionCap.ClientAction.Write.Reader write = action.getWrite();
                             final DataList.Reader refs = write.getReferences();
-                            if (updateFromWrite(txnId, vUUId, write.getValue(), refs)) {
+                            if (updateFromWrite(txnId, vUUId, write.getValue(), refs, reader)) {
                                 modifiedVars.add(vUUId);
                             }
                             break;
@@ -99,10 +109,12 @@ final class Cache {
             throw new IllegalStateException("Divergence discovered on deletion of " + vUUId + ": server thinks we had it cached, but we don't!");
         } else if (vr.version.equals(txnId)) {
             throw new IllegalStateException("Divergence discovered on deletion of " + vUUId + ": server thinks we don't have " + txnId + " but we do!");
+        } else if (vr.reader != null) {
+            vr.reader.release();
         }
     }
 
-    private boolean updateFromWrite(final TxnId txnId, final VarUUId vUUId, final Data.Reader value, final DataList.Reader refs) {
+    private boolean updateFromWrite(final TxnId txnId, final VarUUId vUUId, final Data.Reader value, final DataList.Reader refs, final MessageReaderRefCount reader) {
         ValueRef vr = m.get(vUUId);
         final boolean missing = vr == null;
         final VarUUId[] references = new VarUUId[refs.size()];
@@ -118,7 +130,14 @@ final class Cache {
             vr.references = references;
         }
         vr.version = txnId;
-        vr.value = value.asByteBuffer().asReadOnlyBuffer();
+        vr.value = value.asByteBuffer().asReadOnlyBuffer().slice();
+        if (reader != null) {
+            reader.retain();
+        }
+        if (vr.reader != null) {
+            vr.reader.release();
+        }
+        vr.reader = reader;
         final Iterator<Data.Reader> refsIt = refs.iterator();
         int idx = 0;
         while (refsIt.hasNext()) {

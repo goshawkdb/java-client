@@ -1,7 +1,6 @@
 package io.goshawkdb.client;
 
 import org.capnproto.MessageBuilder;
-import org.capnproto.MessageReader;
 
 import java.io.IOException;
 
@@ -35,19 +34,23 @@ final class AwaitHandshake extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (msg instanceof MessageReader) {
-            final MessageReader read = (MessageReader) msg;
-            final ConnectionCap.Hello.Reader h = read.getRoot(ConnectionCap.Hello.factory);
-            if (h.getProduct().toString().equals(PRODUCT_NAME) && h.getVersion().toString().equals(PRODUCT_VERSION) && !h.getIsClient()) {
-                final ChannelPipeline pipeline = ctx.pipeline();
-                final SslContext clientSslCtx = conn.certs.buildClientSslContext();
-                pipeline.addFirst(clientSslCtx.newHandler(ctx.channel().alloc()));
-                pipeline.remove(this);
-                conn.nextState(ctx);
-                return;
-            } else {
-                ctx.close();
-                throw new IOException("Failed to validate handshake message from server.");
+        if (msg instanceof MessageReaderRefCount) {
+            final MessageReaderRefCount read = (MessageReaderRefCount) msg;
+            try {
+                final ConnectionCap.Hello.Reader h = read.msg.getRoot(ConnectionCap.Hello.factory);
+                if (h.getProduct().toString().equals(PRODUCT_NAME) && h.getVersion().toString().equals(PRODUCT_VERSION) && !h.getIsClient()) {
+                    final ChannelPipeline pipeline = ctx.pipeline();
+                    final SslContext clientSslCtx = conn.certs.buildClientSslContext();
+                    pipeline.addFirst(clientSslCtx.newHandler(ctx.channel().alloc()));
+                    pipeline.remove(this);
+                    conn.nextState(ctx);
+                    return;
+                } else {
+                    ctx.close();
+                    throw new IOException("Failed to validate handshake message from server.");
+                }
+            } finally {
+                read.release();
             }
         }
         super.channelRead(ctx, msg);

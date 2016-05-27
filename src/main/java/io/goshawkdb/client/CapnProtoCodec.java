@@ -13,8 +13,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageCodec;
 
-import static io.netty.buffer.Unpooled.wrappedBuffer;
-
 final class CapnProtoCodec extends ByteToMessageCodec<MessageBuilder> {
     private static final int MAX_SEGMENT_NUMBER = 1024;
     private static final int MAX_TOTAL_SIZE = 1024 * 1024 * 1024;
@@ -40,7 +38,9 @@ final class CapnProtoCodec extends ByteToMessageCodec<MessageBuilder> {
             out.writeIntLE(seg.limit() / 8);
         }
 
-        out.writeBytes(wrappedBuffer(segments));
+        for (ByteBuffer seg : segments) {
+            out.writeBytes(seg);
+        }
     }
 
     @Override
@@ -88,6 +88,6 @@ final class CapnProtoCodec extends ByteToMessageCodec<MessageBuilder> {
             readerIndex += segSize;
         }
         in.readerIndex(readerIndex);
-        out.add(new MessageReader(segmentSlices, ReaderOptions.DEFAULT_READER_OPTIONS));
+        out.add(new MessageReaderRefCount(in, new MessageReader(segmentSlices, ReaderOptions.DEFAULT_READER_OPTIONS)));
     }
 }
