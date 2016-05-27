@@ -1,6 +1,5 @@
 package io.goshawkdb.client;
 
-import java.net.InetAddress;
 import java.util.concurrent.TimeUnit;
 
 import io.netty.channel.EventLoopGroup;
@@ -21,7 +20,7 @@ public class ConnectionFactory {
     static final int KEY_LEN = 20;
     static final TxnId VERSION_ZERO = new TxnId(new byte[KEY_LEN]);
 
-    static final HashedWheelTimer timer = new HashedWheelTimer();
+    public static final HashedWheelTimer timer = new HashedWheelTimer();
 
     public final EventLoopGroup group;
 
