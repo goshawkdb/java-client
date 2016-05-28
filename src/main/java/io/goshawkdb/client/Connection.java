@@ -1,7 +1,6 @@
 package io.goshawkdb.client;
 
 import org.capnproto.MessageBuilder;
-import org.capnproto.MessageReader;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -28,7 +27,7 @@ import static io.goshawkdb.client.ConnectionFactory.KEY_LEN;
  * {@link ConnectionFactory}. A connection can only run one transaction at a time, and nested
  * transactions are supported.
  */
-public class Connection {
+public class Connection implements AutoCloseable {
 
     @ChannelHandler.Sharable
     private static class TxnSubmitter extends ChannelDuplexHandler {
@@ -169,6 +168,7 @@ public class Connection {
      * @throws InterruptedException if an interruption occurs whilst we're waiting for the
      *                              connection to close.
      */
+    @Override
     public void close() throws InterruptedException {
         ChannelFuture closeFuture = null;
         synchronized (lock) {
@@ -188,9 +188,9 @@ public class Connection {
      *                 times as necessary until the transaction either commits or chooses to abort.
      * @param <Result> The result of the transaction fuction.
      * @return The result of the transaction fuction.
-     * @throws Throwable The transaction may through exceptions.
+     * @throws Exception The transaction may through exceptions.
      */
-    public <Result> TransactionResult<Result> runTransaction(final TransactionFun<Result> fun) throws Throwable {
+    public <Result> TransactionResult<Result> runTransaction(final TransactionFun<Result> fun) throws Exception {
         final VarUUId r;
         final Transaction<?> oldTxn;
         synchronized (lock) {

@@ -26,7 +26,7 @@ public class RetryTest extends TestBase {
 
     // This tests that multiple retrying txns are all woken up by a single write.
     @Test
-    public void simpleRetry() throws Throwable {
+    public void simpleRetry() throws Exception {
         try {
             final long magicNumber = 42L;
             final int retriers = 8;
@@ -34,7 +34,7 @@ public class RetryTest extends TestBase {
             final CountDownLatch retryLatch = new CountDownLatch(retriers);
             final CountDownLatch successLatch = new CountDownLatch(retriers);
 
-            inParallel(retriers + 1, (final int tId, final Connection c, final Queue<Throwable> exceptionQ) -> {
+            inParallel(retriers + 1, (final int tId, final Connection c, final Queue<Exception> exceptionQ) -> {
                 awaitRootVersionChange(c, origRootVsn);
 
                 if (tId == 0) {
@@ -81,14 +81,14 @@ public class RetryTest extends TestBase {
 
     // This tests that a retry on several different objects is awoken by a write to one of them.
     @Test
-    public void disjointRetry() throws Throwable {
+    public void disjointRetry() throws Exception {
         try {
             final long magicNumber = 42;
             final int changeIdx = 2;
             final TxnId origRootVsn = setRootToNZeroObjs(createConnections(1)[0], 3);
 
             final CountDownLatch retryLatch = new CountDownLatch(1);
-            inParallel(2, (final int tId, final Connection c, final Queue<Throwable> exceptionQ) -> {
+            inParallel(2, (final int tId, final Connection c, final Queue<Exception> exceptionQ) -> {
                 awaitRootVersionChange(c, origRootVsn);
 
                 if (tId == 0) {

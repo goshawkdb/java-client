@@ -29,12 +29,12 @@ public class ParCountTest extends TestBase {
     }
 
     @Test
-    public void parCount() throws Throwable {
+    public void parCount() throws Exception {
         try {
             final int threadCount = 8;
             final TxnId origRootVsn = setRootToNZeroObjs(createConnections(1)[0], threadCount);
 
-            inParallel(threadCount, (final int tId, final Connection c, final Queue<Throwable> exceptionQ) -> {
+            inParallel(threadCount, (final int tId, final Connection c, final Queue<Exception> exceptionQ) -> {
                 awaitRootVersionChange(c, origRootVsn);
                 final VarUUId objId = c.runTransaction((final Transaction<VarUUId> txn) ->
                         txn.getRoot().getReferences()[tId].id

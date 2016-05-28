@@ -24,7 +24,7 @@ public class NestedTest extends TestBase {
     }
 
     @Test
-    public void nestedRead() throws Throwable {
+    public void nestedRead() throws Exception {
         try {
             final Connection c = createConnections(1)[0];
 
@@ -62,7 +62,7 @@ public class NestedTest extends TestBase {
     }
 
     @Test
-    public void nestedWrite() throws Throwable {
+    public void nestedWrite() throws Exception {
         try {
             final Connection c = createConnections(1)[0];
 
@@ -107,7 +107,7 @@ public class NestedTest extends TestBase {
     }
 
     @Test
-    public void nestedInnerAbort() throws Throwable {
+    public void nestedInnerAbort() throws Exception {
         try {
             final Connection c = createConnections(1)[0];
 
@@ -152,11 +152,11 @@ public class NestedTest extends TestBase {
     }
 
     @Test
-    public void nestedInnerRetry() throws Throwable {
+    public void nestedInnerRetry() throws Exception {
         try {
             final TxnId origRootVsn = setRootToZeroInt64(createConnections(1)[0]);
             final CountDownLatch retryLatch = new CountDownLatch(1);
-            inParallel(2, (final int tId, final Connection c, final Queue<Throwable> exceptionQ) -> {
+            inParallel(2, (final int tId, final Connection c, final Queue<Exception> exceptionQ) -> {
                 if (tId == 0) {
                     awaitRootVersionChange(c, origRootVsn);
                     retryLatch.await();
@@ -190,7 +190,7 @@ public class NestedTest extends TestBase {
     }
 
     @Test
-    public void nestedInnerCreate() throws Throwable {
+    public void nestedInnerCreate() throws Exception {
         try {
             // A create made in a child, returned to the parent should both be
             // directly usable and writable.
@@ -215,7 +215,7 @@ public class NestedTest extends TestBase {
             });
 
             final String val1 = c.runTransaction((final Transaction<String> t0) ->
-                byteBufferToString(t0.getRoot().getReferences()[0].getValue(), "Goodbye".length())
+                    byteBufferToString(t0.getRoot().getReferences()[0].getValue(), "Goodbye".length())
             ).result;
             if (!"Goodbye".equals(val1)) {
                 throw new IllegalStateException("Expected to find 'Gooodbye' as value of obj0. Instead found " + val1);

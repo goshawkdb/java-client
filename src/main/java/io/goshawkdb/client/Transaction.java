@@ -39,7 +39,7 @@ public class Transaction<Result> {
         this.parent = parent;
     }
 
-    TransactionResult<Result> run() throws Throwable {
+    TransactionResult<Result> run() throws Exception {
         try {
             while (true) {
                 if (resetInProgress) {
