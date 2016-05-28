@@ -1,12 +1,5 @@
 package io.goshawkdb.client;
 
-import org.capnproto.MessageBuilder;
-import org.capnproto.MessageReader;
-
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.util.Arrays;
-
 import io.goshawkdb.client.capnp.ConnectionCap;
 import io.goshawkdb.client.capnp.TransactionCap;
 import io.netty.bootstrap.Bootstrap;
@@ -19,6 +12,11 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import org.capnproto.MessageBuilder;
+
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.util.Arrays;
 
 import static io.goshawkdb.client.ConnectionFactory.BUFFER_SIZE;
 import static io.goshawkdb.client.ConnectionFactory.KEY_LEN;
@@ -28,7 +26,7 @@ import static io.goshawkdb.client.ConnectionFactory.KEY_LEN;
  * {@link ConnectionFactory}. A connection can only run one transaction at a time, and nested
  * transactions are supported.
  */
-public class Connection {
+public class Connection implements AutoCloseable {
 
     @ChannelHandler.Sharable
     private static class TxnSubmitter extends ChannelDuplexHandler {
@@ -169,6 +167,7 @@ public class Connection {
      * @throws InterruptedException if an interruption occurs whilst we're waiting for the
      *                              connection to close.
      */
+    @Override
     public void close() throws InterruptedException {
         ChannelFuture closeFuture = null;
         synchronized (lock) {
@@ -176,6 +175,7 @@ public class Connection {
                 closeFuture = connectFuture.channel().close();
             }
         }
+
         if (closeFuture != null) {
             closeFuture.sync();
         }
