@@ -3,7 +3,7 @@ apply plugin: 'java-library-distribution'
 apply plugin: 'jacoco'
 apply plugin: 'maven'
 
-version = '0.2.1'
+version = 'dev'
 group = 'io.goshawkdb'
 archivesBaseName = "goshawkdb-client"
 
