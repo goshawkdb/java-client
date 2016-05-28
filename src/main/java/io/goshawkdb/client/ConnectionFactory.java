@@ -13,7 +13,7 @@ public class ConnectionFactory {
 
     public static final int DEFAULT_PORT = 7894;
     static final String PRODUCT_NAME = "GoshawkDB";
-    static final String PRODUCT_VERSION = "0.2";
+    static final String PRODUCT_VERSION = "dev";
     static final int BUFFER_SIZE = 131072;
     static final int HEARTBEAT_INTERVAL = 2;
     static final TimeUnit HEARTBEAT_INTERVAL_UNIT = TimeUnit.SECONDS;
