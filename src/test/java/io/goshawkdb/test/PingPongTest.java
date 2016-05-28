@@ -24,13 +24,13 @@ public class PingPongTest extends TestBase {
     }
 
     @Test
-    public void pingPong() throws Throwable {
+    public void pingPong() throws Exception {
         try {
             final int limit = 1000;
             final int threadCount = 4;
             final TxnId origRootVsn = setRootToZeroInt64(createConnections(1)[0]);
 
-            inParallel(threadCount, (final int tId, final Connection c, final Queue<Throwable> exceptionQ) -> {
+            inParallel(threadCount, (final int tId, final Connection c, final Queue<Exception> exceptionQ) -> {
                 awaitRootVersionChange(c, origRootVsn);
                 boolean inProgress = true;
                 while (inProgress) {

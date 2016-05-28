@@ -22,8 +22,7 @@ import static io.goshawkdb.test.TestBase.getEnv;
 public class SimpleSetupTest {
 
     @Test
-    public void test() throws Throwable {
-
+    public void test() throws Exception {
         final String clusterCertPath = getEnv("CLUSTER_CERT");
         final String clientKeyPairPath = getEnv("CLIENT_KEYPAIR");
 

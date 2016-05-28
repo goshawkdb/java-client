@@ -26,7 +26,7 @@ import io.goshawkdb.client.TxnId;
 public class TestBase {
 
     public interface ParRunner {
-        void run(final int parIndex, final Connection conn, final Queue<Throwable> exceptionQ) throws Throwable;
+        void run(final int parIndex, final Connection conn, final Queue<Exception> exceptionQ) throws Exception;
     }
 
     private final ConnectionFactory factory;
@@ -69,8 +69,8 @@ public class TestBase {
         return conns;
     }
 
-    protected void inParallel(final int parCount, final ParRunner runner) throws Throwable {
-        final ConcurrentLinkedDeque<Throwable> exceptionQueue = new ConcurrentLinkedDeque<>();
+    protected void inParallel(final int parCount, final ParRunner runner) throws Exception {
+        final ConcurrentLinkedDeque<Exception> exceptionQueue = new ConcurrentLinkedDeque<>();
         final Connection[] conns = createConnections(parCount);
         final Thread[] threads = new Thread[parCount];
         for (int idx = 0; idx < parCount; idx++) {
@@ -79,8 +79,8 @@ public class TestBase {
                 final Connection conn = conns[idxCopy];
                 try {
                     runner.run(idxCopy, conn, exceptionQueue);
-                } catch (final Throwable t) {
-                    exceptionQueue.add(t);
+                } catch (final Exception e) {
+                    exceptionQueue.add(e);
                 }
             });
         }
@@ -90,16 +90,16 @@ public class TestBase {
         for (final Thread t : threads) {
             t.join();
         }
-        final Throwable t = exceptionQueue.peek();
-        if (t != null) {
-            throw t;
+        final Exception e = exceptionQueue.peek();
+        if (e != null) {
+            throw e;
         }
     }
 
     /**
      * Sets the root object to 8 0-bytes, with no references.
      */
-    protected TxnId setRootToZeroInt64(final Connection c) throws Throwable {
+    protected TxnId setRootToZeroInt64(final Connection c) throws Exception {
         return c.runTransaction((final Transaction<TxnId> txn) -> {
             final GoshawkObj root = txn.getRoot();
             root.set(ByteBuffer.allocate(8));
@@ -111,7 +111,7 @@ public class TestBase {
      * Creates n objects, each with 8 0-bytes as their value, and links to all of them from the root
      * object, which has an empty value set.
      */
-    protected TxnId setRootToNZeroObjs(final Connection c, final int n) throws Throwable {
+    protected TxnId setRootToNZeroObjs(final Connection c, final int n) throws Exception {
         return c.runTransaction((final Transaction<TxnId> txn) -> {
             final GoshawkObj[] objs = new GoshawkObj[n];
             for (int idx = 0; idx < n; idx++) {
@@ -123,7 +123,7 @@ public class TestBase {
         }).result;
     }
 
-    protected TxnId awaitRootVersionChange(final Connection c, final TxnId oldVsn) throws Throwable {
+    protected TxnId awaitRootVersionChange(final Connection c, final TxnId oldVsn) throws Exception {
         return c.runTransaction(txn -> {
             if (txn.getRoot().getVersion().equals(oldVsn)) {
                 txn.retry();

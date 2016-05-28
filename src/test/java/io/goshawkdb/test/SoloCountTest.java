@@ -23,7 +23,7 @@ public class SoloCountTest extends TestBase {
     }
 
     @Test
-    public void soloCount() throws Throwable {
+    public void soloCount() throws Exception {
         try {
             final Connection conn = createConnections(1)[0];
             setRootToZeroInt64(conn);

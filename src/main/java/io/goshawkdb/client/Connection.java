@@ -1,7 +1,6 @@
 package io.goshawkdb.client;
 
 import org.capnproto.MessageBuilder;
-import org.capnproto.MessageReader;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -189,9 +188,9 @@ public class Connection implements AutoCloseable {
      *                 times as necessary until the transaction either commits or chooses to abort.
      * @param <Result> The result of the transaction fuction.
      * @return The result of the transaction fuction.
-     * @throws Throwable The transaction may through exceptions.
+     * @throws Exception The transaction may through exceptions.
      */
-    public <Result> TransactionResult<Result> runTransaction(final TransactionFun<Result> fun) throws Throwable {
+    public <Result> TransactionResult<Result> runTransaction(final TransactionFun<Result> fun) throws Exception {
         final VarUUId r;
         final Transaction<?> oldTxn;
         synchronized (lock) {

@@ -23,7 +23,7 @@ public class SimpleConflictTest extends TestBase {
     }
 
     @Test
-    public void simpleConflict() throws Throwable {
+    public void simpleConflict() throws Exception {
         try {
             final long limit = 1000;
             final int parCount = 5;
@@ -31,7 +31,7 @@ public class SimpleConflictTest extends TestBase {
 
             final TxnId rootOrigVsn = setRootToNZeroObjs(createConnections(1)[0], objCount);
 
-            inParallel(parCount, (final int tId, final Connection conn, final Queue<Throwable> exceptionQ) -> {
+            inParallel(parCount, (final int tId, final Connection conn, final Queue<Exception> exceptionQ) -> {
                 awaitRootVersionChange(conn, rootOrigVsn);
                 long expected = 0L;
                 final ByteBuffer buf = ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN);

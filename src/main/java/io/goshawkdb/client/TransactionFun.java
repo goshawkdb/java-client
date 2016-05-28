@@ -12,8 +12,8 @@ public interface TransactionFun<Result> {
      * @param txn The API through which your transaction can navigate and interact with the
      *            object-graph stored by GoshawkDB.
      * @return A result
-     * @throws Throwable your callback may throw an exception, for example to indicate you wish the
+     * @throws Exception your callback may throw an exception, for example to indicate you wish the
      *                   transaction to be aborted.
      */
-    Result Run(final Transaction<Result> txn) throws Throwable;
+    Result Run(final Transaction<Result> txn) throws Exception;
 }
