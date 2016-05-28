@@ -1,5 +1,6 @@
 # GoshawkDB Java Client
 
+* Maven: Available in [maven central](https://search.maven.org/#search%7Cga%7C1%7Cg%3A%22io.goshawkdb%22)
 * License: Apache License version 2.0 (see [LICENSE](LICENSE) file)
 * Issue tracker: Please issue [GoshawkDB's bug tracker](https://bugs.goshawkdb.io/)
 
