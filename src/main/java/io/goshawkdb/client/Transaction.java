@@ -105,8 +105,14 @@ public class Transaction<Result> {
     /**
      * Create a new object and set its value and references.
      *
-     * @param value      The initial value of the new object
-     * @param references The initial set of references to objects
+     * @param value      The value to set the new object to. The buffer will be cloned and the
+     *                   contents copied. Therefore any changes you make to this param after calling
+     *                   this method will be ignored (you will need to call a set method). The
+     *                   copying will not alter any position, limit, capacity or marks of the value
+     *                   ByteBuffer. The value is taken to be from position 0 to the current limit
+     *                   of the buffer.
+     * @param references The list of objects to which the new object refers. Again, the array of
+     *                   references is copied.
      * @return The new object
      */
     public GoshawkObj createObject(final ByteBuffer value, final GoshawkObj... references) {
@@ -115,7 +121,7 @@ public class Transaction<Result> {
         }
         final GoshawkObj obj = new GoshawkObj(conn.nextVarUUId(), conn);
         objs.put(obj.id, obj);
-        obj.state = new ObjectState(obj, this, value, null, references, true);
+        obj.state = new ObjectState(obj, this, value, references);
         return obj;
     }
 
@@ -143,7 +149,7 @@ public class Transaction<Result> {
             obj = parent.getObject(vUUId, false);
             if (obj != null) {
                 if (addToTxn) {
-                    obj.state = obj.state.clone(this);
+                    obj.state = new ObjectState(obj.state, this);
                     objs.put(vUUId, obj);
                 }
                 return obj;

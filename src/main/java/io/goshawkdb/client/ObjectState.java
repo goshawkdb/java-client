@@ -19,15 +19,12 @@ class ObjectState {
     boolean read = false;
     boolean write = false;
 
-    ObjectState(GoshawkObj gObj, Transaction<?> txn, ByteBuffer val, MessageReaderRefCount valRef, GoshawkObj[] refs, boolean created) {
+    // from creation, so does cloning of val and refs
+    ObjectState(final GoshawkObj gObj, final Transaction<?> txn, final ByteBuffer val, final GoshawkObj[] refs) {
         obj = gObj;
-        create = created;
+        create = true;
         transaction = txn;
         curValue = cloneByteBuffer(val).asReadOnlyBuffer();
-        curValueRef = valRef;
-        if (curValueRef != null) {
-            curValueRef.retain();
-        }
         if (refs == null) {
             curObjectRefs = new GoshawkObj[0];
         } else {
@@ -36,18 +33,26 @@ class ObjectState {
         }
     }
 
-    ObjectState(GoshawkObj gObj, Transaction<?> txn) {
+    ObjectState(final GoshawkObj gObj, final Transaction<?> txn) {
         obj = gObj;
         create = false;
         transaction = txn;
     }
 
-    ObjectState clone(Transaction<?> txn) {
-        final ObjectState os = new ObjectState(obj, txn, curValue, curValueRef, curObjectRefs, create);
-        os.parent = this;
-        os.curVersion = curVersion;
-        os.read = read;
-        os.write = write;
-        return os;
+    // The clone/parent version. Because we do clones of val and refs on their way out, we don't need to clone here.
+    ObjectState(final ObjectState state, final Transaction<?> txn) {
+        obj = state.obj;
+        parent = state;
+        transaction = txn;
+        curVersion = state.curVersion;
+        curValue = state.curValue;
+        curValueRef = state.curValueRef;
+        if (curValueRef != null) {
+            curValueRef.retain();
+        }
+        curObjectRefs = state.curObjectRefs;
+        create = state.create;
+        read = state.read;
+        write = state.write;
     }
 }
