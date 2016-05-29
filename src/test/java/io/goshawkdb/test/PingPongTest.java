@@ -15,8 +15,9 @@ import java.util.Queue;
 
 import io.goshawkdb.client.Connection;
 import io.goshawkdb.client.GoshawkObj;
-import io.goshawkdb.client.Transaction;
 import io.goshawkdb.client.TxnId;
+
+import static org.junit.Assert.fail;
 
 public class PingPongTest extends TestBase {
 
@@ -34,7 +35,7 @@ public class PingPongTest extends TestBase {
                 awaitRootVersionChange(c, origRootVsn);
                 boolean inProgress = true;
                 while (inProgress) {
-                    inProgress = c.runTransaction((final Transaction<Boolean> txn) -> {
+                    inProgress = c.runTransaction(txn -> {
                         final GoshawkObj root = txn.getRoot();
                         final ByteBuffer valBuf = root.getValue().order(ByteOrder.BIG_ENDIAN);
                         final long val = valBuf.getLong(0);
@@ -45,7 +46,7 @@ public class PingPongTest extends TestBase {
                             root.set(valBuf.putLong(0, val + 1));
                         } else {
                             txn.retry();
-                            throw new IllegalStateException("Reached unreachable code!");
+                            fail("Reached unreachable code!");
                         }
                         return true;
                     }).result;

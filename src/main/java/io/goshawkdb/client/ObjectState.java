@@ -9,7 +9,7 @@ class ObjectState {
     final GoshawkObj obj;
 
     ObjectState parent = null;
-    Transaction<?> transaction = null;
+    TransactionImpl<?> transaction = null;
     TxnId curVersion = null;
     ByteBuffer curValue = null;
     MessageReaderRefCount curValueRef = null;
@@ -20,7 +20,7 @@ class ObjectState {
     boolean write = false;
 
     // from creation, so does cloning of val and refs
-    ObjectState(final GoshawkObj gObj, final Transaction<?> txn, final ByteBuffer val, final GoshawkObj[] refs) {
+    ObjectState(final GoshawkObj gObj, final TransactionImpl<?> txn, final ByteBuffer val, final GoshawkObj[] refs) {
         obj = gObj;
         create = true;
         transaction = txn;
@@ -33,14 +33,14 @@ class ObjectState {
         }
     }
 
-    ObjectState(final GoshawkObj gObj, final Transaction<?> txn) {
+    ObjectState(final GoshawkObj gObj, final TransactionImpl<?> txn) {
         obj = gObj;
         create = false;
         transaction = txn;
     }
 
     // The clone/parent version. Because we do clones of val and refs on their way out, we don't need to clone here.
-    ObjectState(final ObjectState state, final Transaction<?> txn) {
+    ObjectState(final ObjectState state, final TransactionImpl<?> txn) {
         obj = state.obj;
         parent = state;
         transaction = txn;

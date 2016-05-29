@@ -17,8 +17,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.goshawkdb.client.Connection;
 import io.goshawkdb.client.GoshawkObj;
-import io.goshawkdb.client.Transaction;
 import io.goshawkdb.client.TxnId;
+
+import static org.junit.Assert.fail;
 
 public class RetryTest extends TestBase {
     public RetryTest() throws NoSuchProviderException, NoSuchAlgorithmException, CertificateException, KeyStoreException, IOException, InvalidKeySpecException, InvalidKeyException {
@@ -48,7 +49,7 @@ public class RetryTest extends TestBase {
 
                 } else {
                     final AtomicBoolean triggered = new AtomicBoolean(false);
-                    final long found = c.runTransaction((final Transaction<Long> txn) -> {
+                    final long found = c.runTransaction(txn -> {
                         final long num = txn.getRoot().getValue().order(ByteOrder.BIG_ENDIAN).getLong(0);
                         if (num == 0) {
                             if (!triggered.get()) {
@@ -60,13 +61,13 @@ public class RetryTest extends TestBase {
                             }
                             txn.retry();
                         } else if (!triggered.get()) {
-                            throw new IllegalStateException("" + tId + ": found " + num + " before I triggered!");
+                            fail("" + tId + ": found " + num + " before I triggered!");
                         }
                         System.out.println("" + tId + ": found non-zero: " + num);
                         return num;
                     }).result;
                     if (found != magicNumber) {
-                        throw new IllegalStateException("" + tId + ": expected to find " + magicNumber + " but found " + found);
+                        fail("" + tId + ": expected to find " + magicNumber + " but found " + found);
                     }
                     successLatch.countDown();
                 }
@@ -102,7 +103,7 @@ public class RetryTest extends TestBase {
 
                 } else {
                     final AtomicBoolean triggered = new AtomicBoolean(false);
-                    final int foundIdx = c.runTransaction((final Transaction<Integer> txn) -> {
+                    final int foundIdx = c.runTransaction(txn -> {
                         final GoshawkObj[] objs = txn.getRoot().getReferences();
                         for (int idx = 0; idx < objs.length; idx++) {
                             final GoshawkObj obj = objs[idx];
@@ -116,10 +117,11 @@ public class RetryTest extends TestBase {
                             retryLatch.countDown();
                         }
                         txn.retry();
-                        throw new IllegalStateException("" + tId + ": Reached unreachable code");
+                        fail("" + tId + ": Reached unreachable code");
+                        return null;
                     }).result;
                     if (foundIdx != changeIdx) {
-                        throw new IllegalStateException("" + tId + ": Expected to find " + changeIdx + " had changed, but actually found " + foundIdx);
+                        fail("" + tId + ": Expected to find " + changeIdx + " had changed, but actually found " + foundIdx);
                     }
                 }
             });

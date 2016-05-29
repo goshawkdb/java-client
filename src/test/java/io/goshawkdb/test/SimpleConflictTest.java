@@ -15,8 +15,9 @@ import java.util.Queue;
 
 import io.goshawkdb.client.Connection;
 import io.goshawkdb.client.GoshawkObj;
-import io.goshawkdb.client.Transaction;
 import io.goshawkdb.client.TxnId;
+
+import static org.junit.Assert.fail;
 
 public class SimpleConflictTest extends TestBase {
     public SimpleConflictTest() throws NoSuchProviderException, NoSuchAlgorithmException, CertificateException, KeyStoreException, IOException, InvalidKeySpecException, InvalidKeyException {
@@ -37,7 +38,7 @@ public class SimpleConflictTest extends TestBase {
                 final ByteBuffer buf = ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN);
                 while (expected <= limit) {
                     final long expectedCopy = expected;
-                    final long read = conn.runTransaction((final Transaction<Long> txn) -> {
+                    final long read = conn.runTransaction(txn -> {
                         System.out.println("" + tId + ": starting with expected " + expectedCopy);
                         final GoshawkObj[] objs = txn.getRoot().getReferences();
                         final long val = objs[0].getValue().order(ByteOrder.BIG_ENDIAN).getLong(0);
@@ -51,13 +52,13 @@ public class SimpleConflictTest extends TestBase {
                             if (val == vali) {
                                 objs[idx].set(buf);
                             } else {
-                                throw new IllegalStateException("" + tId + ": Object 0 has value " + val + " but " + idx + " has value " + vali);
+                                fail("" + tId + ": Object 0 has value " + val + " but " + idx + " has value " + vali);
                             }
                         }
                         return val + 1;
                     }).result;
                     if (read < expected) {
-                        throw new IllegalStateException("" + tId + ": expected to read " + expected + " but read " + read);
+                        fail("" + tId + ": expected to read " + expected + " but read " + read);
                     }
                     expected = read + 1;
                 }

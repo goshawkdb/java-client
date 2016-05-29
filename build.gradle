@@ -14,7 +14,8 @@ javadoc {
     source = {
         fileTree(dir: 'src/main/java/io/goshawkdb/client',
                 includes: ['Certs.java', 'Connection.java', 'ConnectionFactory.java',
-                           'GoshawkObj.java', 'Transaction.java', 'TransactionFun.java',
+                           'GoshawkObj.java', 'Transaction.java', 'TransactionFunction.java',
+                           'TransactionAbortedException.java',
                            'TransactionResult.java', 'TxnId.java', 'VarUUId.java'])
     }
 }
