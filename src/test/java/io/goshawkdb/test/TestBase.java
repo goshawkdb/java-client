@@ -20,8 +20,9 @@ import io.goshawkdb.client.Certs;
 import io.goshawkdb.client.Connection;
 import io.goshawkdb.client.ConnectionFactory;
 import io.goshawkdb.client.GoshawkObj;
-import io.goshawkdb.client.Transaction;
 import io.goshawkdb.client.TxnId;
+
+import static junit.framework.TestCase.assertNotNull;
 
 public class TestBase {
 
@@ -63,6 +64,7 @@ public class TestBase {
         final Connection[] conns = new Connection[n];
         for (int idx = 0; idx < n; idx++) {
             final Connection c = factory.connect(certs, hosts[idx % hosts.length]);
+            assertNotNull(c);
             conns[idx] = c;
             connections.add(c);
         }
@@ -99,8 +101,8 @@ public class TestBase {
     /**
      * Sets the root object to 8 0-bytes, with no references.
      */
-    protected TxnId setRootToZeroInt64(final Connection c) throws Exception {
-        return c.runTransaction((final Transaction<TxnId> txn) -> {
+    protected TxnId setRootToZeroInt64(final Connection c) {
+        return c.runTransaction(txn -> {
             final GoshawkObj root = txn.getRoot();
             root.set(ByteBuffer.allocate(8));
             return root.getVersion();
@@ -111,8 +113,8 @@ public class TestBase {
      * Creates n objects, each with 8 0-bytes as their value, and links to all of them from the root
      * object, which has an empty value set.
      */
-    protected TxnId setRootToNZeroObjs(final Connection c, final int n) throws Exception {
-        return c.runTransaction((final Transaction<TxnId> txn) -> {
+    protected TxnId setRootToNZeroObjs(final Connection c, final int n) {
+        return c.runTransaction(txn -> {
             final GoshawkObj[] objs = new GoshawkObj[n];
             for (int idx = 0; idx < n; idx++) {
                 objs[idx] = txn.createObject(ByteBuffer.allocate(8));
@@ -123,7 +125,7 @@ public class TestBase {
         }).result;
     }
 
-    protected TxnId awaitRootVersionChange(final Connection c, final TxnId oldVsn) throws Exception {
+    protected TxnId awaitRootVersionChange(final Connection c, final TxnId oldVsn) {
         return c.runTransaction(txn -> {
             if (txn.getRoot().getVersion().equals(oldVsn)) {
                 txn.retry();

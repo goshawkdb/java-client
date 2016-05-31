@@ -1,10 +1,13 @@
 package io.goshawkdb.client;
 
+import java.util.function.Function;
+
 /**
  * Implement this interface to create transaction funs that can be passed to {@link Connection}'s
  * runTransaction. This can neatly be done inline using a lambda expression.
  */
-public interface TransactionFun<Result> {
+@FunctionalInterface
+public interface TransactionFunction<R> extends Function<Transaction, R> {
     /**
      * The callback invoked (potentially several times) to run your transaction. If you wish to
      * abort the transaction, throw an exception from within.
@@ -15,5 +18,6 @@ public interface TransactionFun<Result> {
      * @throws Exception your callback may throw an exception, for example to indicate you wish the
      *                   transaction to be aborted.
      */
-    Result Run(final Transaction<Result> txn) throws Exception;
+    @Override
+    R apply(final Transaction txn);
 }

@@ -14,7 +14,8 @@ import java.security.spec.InvalidKeySpecException;
 
 import io.goshawkdb.client.Connection;
 import io.goshawkdb.client.GoshawkObj;
-import io.goshawkdb.client.Transaction;
+
+import static org.junit.Assert.fail;
 
 public class SoloCountTest extends TestBase {
 
@@ -23,7 +24,7 @@ public class SoloCountTest extends TestBase {
     }
 
     @Test
-    public void soloCount() throws Exception {
+    public void soloCount() throws InterruptedException {
         try {
             final Connection conn = createConnections(1)[0];
             setRootToZeroInt64(conn);
@@ -31,7 +32,7 @@ public class SoloCountTest extends TestBase {
             long expected = 0L;
             for (int idx = 0; idx < 1000; idx++) {
                 final long expectedCopy = expected;
-                expected = conn.runTransaction((final Transaction<Long> txn) -> {
+                expected = conn.runTransaction(txn -> {
                     final GoshawkObj root = txn.getRoot();
                     final ByteBuffer valBuf = root.getValue().order(ByteOrder.BIG_ENDIAN);
                     final long old = valBuf.getLong(0);
@@ -40,7 +41,8 @@ public class SoloCountTest extends TestBase {
                         root.set(valBuf.putLong(0, val));
                         return val;
                     } else {
-                        throw new IllegalStateException("Expected " + expectedCopy + " but found " + old);
+                        fail("Expected " + expectedCopy + " but found " + old);
+                        return null;
                     }
                 }).result;
             }

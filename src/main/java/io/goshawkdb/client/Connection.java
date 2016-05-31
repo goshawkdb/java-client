@@ -90,7 +90,7 @@ public class Connection implements AutoCloseable {
     private ByteBuffer nameSpace;
     private long nextVarUUId;
     private long nextTxnId;
-    private Transaction<?> txn;
+    private TransactionImpl<?> txn;
 
     Connection(final ConnectionFactory cf, final Certs c, final String h, final int p) {
         port = p;
@@ -184,15 +184,15 @@ public class Connection implements AutoCloseable {
     /**
      * Run a transaction.
      *
-     * @param fun      The transaction function to run. This will be automatically restarted as many
-     *                 times as necessary until the transaction either commits or chooses to abort.
-     * @param <Result> The result of the transaction fuction.
-     * @return The result of the transaction fuction.
+     * @param fun The transaction function to run. This will be automatically restarted as many
+     *            times as necessary until the transaction either commits or chooses to abort.
+     * @param <R> The type of the result of the transaction function.
+     * @return The result of the transaction function.
      * @throws Exception The transaction may through exceptions.
      */
-    public <Result> TransactionResult<Result> runTransaction(final TransactionFun<Result> fun) throws Exception {
+    public <R> TransactionResult<R> runTransaction(final TransactionFunction<R> fun) {
         final VarUUId r;
-        final Transaction<?> oldTxn;
+        final TransactionImpl<?> oldTxn;
         synchronized (lock) {
             if (root == null) {
                 throw new IllegalStateException("Unable to start transaction: root object not ready");
@@ -200,7 +200,7 @@ public class Connection implements AutoCloseable {
             r = root;
             oldTxn = txn;
         }
-        final Transaction<Result> curTxn = new Transaction<>(fun, this, this.cache, r, oldTxn);
+        final TransactionImpl<R> curTxn = new TransactionImpl<>(fun, this, this.cache, r, oldTxn);
         synchronized (lock) {
             txn = curTxn;
         }
