@@ -176,7 +176,7 @@ public class NestedTest extends TestBase {
                 final GoshawkObj rootObj0 = t0.getRoot();
                 final GoshawkObj obj0 = c.runTransaction(t1 -> {
                     final GoshawkObj obj1 = t1.createObject(ByteBuffer.wrap("Hello".getBytes()));
-                    t1.getRoot().setReferences(obj1);
+                    t1.getRoot().set(null, obj1);
                     return obj1;
                 }).result;
                 final GoshawkObj[] refs = rootObj0.getReferences();

@@ -78,11 +78,12 @@ public class GoshawkObj {
     /**
      * Sets the value and references of the current object. If the value contains any references to
      * other objects, they must be explicitly declared as references otherwise on retrieval you will
-     * not be able to navigate to them. Note that the order of references is stable.
+     * not be able to navigate to them. Note that the order of references is stable. A null value
+     * sets the value to a zero-length ByteBuffer.
      *
      * @param value      The value to set the object to. The buffer will be cloned and the contents
      *                   copied. Therefore any changes you make to this param after calling this
-     *                   method will be ignored (you will need to call a set method again). The
+     *                   method will be ignored (you will need to call the set method again). The
      *                   copying will not alter any position, limit, capacity or marks of the value
      *                   ByteBuffer. The value is taken to be from position 0 to the current limit
      *                   of the buffer.
@@ -90,68 +91,23 @@ public class GoshawkObj {
      *                   array of references is copied.
      */
     public void set(final ByteBuffer value, final GoshawkObj... references) {
-        if (value == null || references == null) {
-            throw new NullPointerException("Nulls encountered in call to GoshawkObj.set");
-        }
         checkExpired();
         state.write = true;
-        state.curValue = cloneByteBuffer(value).asReadOnlyBuffer();
-        if (state.curValueRef != null) {
-            state.curValueRef.release();
-            state.curValueRef = null;
-        }
-        state.curObjectRefs = new GoshawkObj[references.length];
-        System.arraycopy(references, 0, state.curObjectRefs, 0, references.length);
-    }
-
-    /**
-     * Sets the value of the current object. The current references are unaltered. If the value
-     * contains any references to other objects, they must be explicitly declared as references
-     * otherwise on retrieval you will not be able to navigate to them. Note that the order of
-     * references is stable.
-     *
-     * @param value The value to set the object to. The buffer will be cloned and the contents
-     *              copied. Therefore any changes you make to this param after calling this method
-     *              will be ignored (you will need to call a set method again). The copying will not
-     *              alter any position, limit, capacity or marks of the value ByteBuffer. The value
-     *              is taken to be from position 0 to the current limit of the buffer.
-     */
-    public void setValue(final ByteBuffer value) {
         if (value == null) {
-            throw new NullPointerException("Nulls encountered in call to GoshawkObj.setValue");
+            state.curValue = ByteBuffer.allocate(0).asReadOnlyBuffer();
+        } else {
+            state.curValue = cloneByteBuffer(value).asReadOnlyBuffer();
         }
-        checkExpired();
-        state.write = true;
-        state.curValue = cloneByteBuffer(value).asReadOnlyBuffer();
         if (state.curValueRef != null) {
             state.curValueRef.release();
             state.curValueRef = null;
         }
-        if (state.curObjectRefs == null) {
-            state.curObjectRefs = new GoshawkObj[0];
-        }
-    }
-
-    /**
-     * Sets the references of the current object. The current value is unaltered. If the value
-     * contains any references to other objects, they must be explicitly declared as references
-     * otherwise on retrieval you will not be able to navigate to them. Note that the order of
-     * references is stable.
-     *
-     * @param references The new list of objects to which the current object refers. The array of
-     *                   references is copied.
-     */
-    public void setReferences(final GoshawkObj... references) {
         if (references == null) {
-            throw new NullPointerException("Nulls encountered in call to GoshawkObj.setReferences");
+            state.curObjectRefs = new GoshawkObj[0];
+        } else {
+            state.curObjectRefs = new GoshawkObj[references.length];
+            System.arraycopy(references, 0, state.curObjectRefs, 0, references.length);
         }
-        checkExpired();
-        state.write = true;
-        if (state.curValue == null) {
-            state.curValue = ByteBuffer.allocate(0);
-        }
-        state.curObjectRefs = new GoshawkObj[references.length];
-        System.arraycopy(references, 0, state.curObjectRefs, 0, references.length);
     }
 
     private void maybeRecordRead(boolean ignoreWritten) {
