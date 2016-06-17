@@ -20,6 +20,7 @@ import io.goshawkdb.client.Certs;
 import io.goshawkdb.client.Connection;
 import io.goshawkdb.client.ConnectionFactory;
 import io.goshawkdb.client.GoshawkObj;
+import io.goshawkdb.client.Transaction;
 import io.goshawkdb.client.TxnId;
 
 import static junit.framework.TestCase.assertNotNull;
@@ -34,6 +35,7 @@ public class TestBase {
     private final Certs certs;
     private final String[] hosts;
     private final List<Connection> connections = new ArrayList<>();
+    private final String rootName;
 
     TestBase() throws NoSuchProviderException, NoSuchAlgorithmException, CertificateException, KeyStoreException, IOException, InvalidKeySpecException, InvalidKeyException {
         final String clusterCertPath = getEnv("CLUSTER_CERT");
@@ -45,6 +47,8 @@ public class TestBase {
 
         final String hostStr = getEnv("CLUSTER_HOSTS");
         hosts = hostStr.split(",");
+
+        rootName = getEnv("ROOT_NAME");
 
         factory = new ConnectionFactory();
     }
@@ -98,12 +102,20 @@ public class TestBase {
         }
     }
 
+    protected GoshawkObj getRoot(final Transaction txn) {
+        final GoshawkObj root = txn.getRoots().get(rootName);
+        if (root == null) {
+            throw new IllegalStateException("No root named '" + rootName + "' is available");
+        }
+        return root;
+    }
+
     /**
      * Sets the root object to 8 0-bytes, with no references.
      */
     protected TxnId setRootToZeroInt64(final Connection c) {
         return c.runTransaction(txn -> {
-            final GoshawkObj root = txn.getRoot();
+            final GoshawkObj root = getRoot(txn);
             root.set(ByteBuffer.allocate(8));
             return root.getVersion();
         }).result;
@@ -119,7 +131,7 @@ public class TestBase {
             for (int idx = 0; idx < n; idx++) {
                 objs[idx] = txn.createObject(ByteBuffer.allocate(8));
             }
-            final GoshawkObj root = txn.getRoot();
+            final GoshawkObj root = getRoot(txn);
             root.set(ByteBuffer.allocate(0), objs);
             return root.getVersion();
         }).result;
@@ -127,7 +139,8 @@ public class TestBase {
 
     protected TxnId awaitRootVersionChange(final Connection c, final TxnId oldVsn) {
         return c.runTransaction(txn -> {
-            if (txn.getRoot().getVersion().equals(oldVsn)) {
+            final GoshawkObj root = getRoot(txn);
+            if (root.getVersion().equals(oldVsn)) {
                 txn.retry();
             }
             return null;

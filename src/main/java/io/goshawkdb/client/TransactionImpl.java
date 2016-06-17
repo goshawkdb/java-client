@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import io.goshawkdb.client.capnp.ConnectionCap;
 import io.goshawkdb.client.capnp.TransactionCap;
@@ -22,16 +23,16 @@ class TransactionImpl<R> implements Transaction {
     private final HashMap<VarUUId, GoshawkObj> objs = new HashMap<>();
     private final TransactionFunction<R> fun;
     private final Connection conn;
-    private final VarUUId root;
+    private final Map<String, VarUUId> roots;
     private final TransactionImpl<?> parent;
 
     boolean resetInProgress = false;
 
-    TransactionImpl(final TransactionFunction<R> fun, final Connection conn, Cache cache, final VarUUId root, final TransactionImpl<?> parent) {
+    TransactionImpl(final TransactionFunction<R> fun, final Connection conn, Cache cache, final Map<String, VarUUId> roots, final TransactionImpl<?> parent) {
         this.fun = fun;
         this.conn = conn;
         this.cache = cache;
-        this.root = root;
+        this.roots = roots;
         this.parent = parent;
     }
 
@@ -86,8 +87,10 @@ class TransactionImpl<R> implements Transaction {
     }
 
     @Override
-    public GoshawkObj getRoot() {
-        return getObject(root);
+    public Map<String, GoshawkObj> getRoots() {
+        final Map<String, GoshawkObj> rootObjects = new HashMap<>();
+        roots.forEach((name, vUUId) -> rootObjects.put(name, getObject(vUUId)));
+        return rootObjects;
     }
 
     @Override

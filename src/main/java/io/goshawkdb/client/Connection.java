@@ -1,10 +1,14 @@
 package io.goshawkdb.client;
 
 import org.capnproto.MessageBuilder;
+import org.capnproto.StructList;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 import io.goshawkdb.client.capnp.ConnectionCap;
 import io.goshawkdb.client.capnp.TransactionCap;
@@ -86,7 +90,7 @@ public class Connection implements AutoCloseable {
     private ChannelFuture connectFuture;
     private State state;
     private ChannelPipeline pipeline;
-    private VarUUId root;
+    private Map<String, VarUUId> roots;
     private ByteBuffer nameSpace;
     private long nextVarUUId;
     private long nextTxnId;
@@ -124,7 +128,7 @@ public class Connection implements AutoCloseable {
         }
         future.sync();
         synchronized (lock) {
-            while (root == null && future.channel().isOpen()) {
+            while (roots == null && future.channel().isOpen()) {
                 lock.wait();
             }
         }
@@ -138,7 +142,7 @@ public class Connection implements AutoCloseable {
     public boolean isConnected() {
         synchronized (lock) {
             if (connectFuture != null) {
-                return connectFuture.channel().isActive() && root != null;
+                return connectFuture.channel().isActive() && roots != null;
             }
         }
         return false;
@@ -191,13 +195,13 @@ public class Connection implements AutoCloseable {
      * @throws Exception The transaction may through exceptions.
      */
     public <R> TransactionResult<R> runTransaction(final TransactionFunction<R> fun) {
-        final VarUUId r;
+        final Map<String, VarUUId> r;
         final TransactionImpl<?> oldTxn;
         synchronized (lock) {
-            if (root == null) {
-                throw new IllegalStateException("Unable to start transaction: root object not ready");
+            if (roots == null) {
+                throw new IllegalStateException("Unable to start transaction: roots are not ready");
             }
-            r = root;
+            r = roots;
             oldTxn = txn;
         }
         final TransactionImpl<R> curTxn = new TransactionImpl<>(fun, this, this.cache, r, oldTxn);
@@ -223,18 +227,20 @@ public class Connection implements AutoCloseable {
     }
 
     void serverHello(final ConnectionCap.HelloClientFromServer.Reader hello, final ChannelHandlerContext ctx) throws InterruptedException {
-        final ByteBuffer rootId = hello.getRootId().asByteBuffer();
-        if (rootId.limit() == 0) {
+        final StructList.Reader<ConnectionCap.Root.Reader> rootsCap = hello.getRoots();
+        if (rootsCap.size() == 0) {
             lock.notifyAll();
-            throw new IllegalStateException("Cluster is not yet formed; Root object has not been created.");
-        } else if (rootId.limit() != KEY_LEN) {
-            lock.notifyAll();
-            throw new IllegalStateException("Root object VarUUId is of wrong length!");
+            throw new IllegalStateException("Cluster is not yet formed; No roots have been created.");
         } else {
+            final Map<String, VarUUId> roots = new HashMap<>();
+            for (ConnectionCap.Root.Reader reader : rootsCap) {
+                final VarUUId rootId = new VarUUId(reader.getVarId().asByteBuffer());
+                roots.put(reader.getName().toString(), rootId);
+            }
             nextState(ctx);
             synchronized (lock) {
                 pipeline = ctx.pipeline();
-                root = new VarUUId(rootId);
+                this.roots = Collections.unmodifiableMap(roots);
                 nameSpace = ByteBuffer.allocate(KEY_LEN);
                 nameSpace.position(8);
                 nameSpace.put(hello.getNamespace().asByteBuffer());
@@ -247,7 +253,7 @@ public class Connection implements AutoCloseable {
 
     void disconnected() {
         synchronized (lock) {
-            root = null;
+            roots = null;
             cache.clear();
             lock.notifyAll();
         }

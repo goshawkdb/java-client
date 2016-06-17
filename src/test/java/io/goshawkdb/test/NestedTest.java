@@ -35,13 +35,13 @@ public class NestedTest extends TestBase {
 
             // Just read the root var from several nested txns
             final int r0 = c.runTransaction(t0 -> {
-                final GoshawkObj rootObj0 = t0.getRoot();
+                final GoshawkObj rootObj0 = getRoot(t0);
                 assertNotNull(rootObj0);
                 final int r1 = c.runTransaction(t1 -> {
-                    final GoshawkObj rootObj1 = t1.getRoot();
+                    final GoshawkObj rootObj1 = getRoot(t1);
                     assertSame("Should have pointer equality between the same object in nested txns", rootObj0, rootObj1);
                     final int r2 = c.runTransaction(t2 -> {
-                        final GoshawkObj rootObj2 = t2.getRoot();
+                        final GoshawkObj rootObj2 = getRoot(t2);
                         assertSame("Should have pointer equality between the same object in nested txns", rootObj1, rootObj2);
                         return 42;
                     }).result;
@@ -64,16 +64,16 @@ public class NestedTest extends TestBase {
 
             // A write made in a parent should be visible in the child
             c.runTransaction(t0 -> {
-                final GoshawkObj rootObj0 = t0.getRoot();
+                final GoshawkObj rootObj0 = getRoot(t0);
                 assertNotNull(rootObj0);
                 rootObj0.set(ByteBuffer.wrap("outer".getBytes()));
                 c.runTransaction(t1 -> {
-                    final GoshawkObj rootObj1 = t1.getRoot();
+                    final GoshawkObj rootObj1 = getRoot(t1);
                     final String found1 = byteBufferToString(rootObj1.getValue(), "outer".length());
                     assertEquals("Expected to find 'outer' but found " + found1, "outer", found1);
                     rootObj1.set(ByteBuffer.wrap("mid".getBytes()));
                     c.runTransaction(t2 -> {
-                        final GoshawkObj rootObj2 = t2.getRoot();
+                        final GoshawkObj rootObj2 = getRoot(t2);
                         final String found2 = byteBufferToString(rootObj2.getValue(), "mid".length());
                         assertEquals("Expected to find 'mid' but found " + found2, "mid", found2);
                         rootObj1.set(ByteBuffer.wrap("inner".getBytes()));
@@ -99,16 +99,16 @@ public class NestedTest extends TestBase {
 
             // A write made in a child which is aborted should not be seen in the parent.
             c.runTransaction(t0 -> {
-                final GoshawkObj rootObj0 = t0.getRoot();
+                final GoshawkObj rootObj0 = getRoot(t0);
                 assertNotNull(rootObj0);
                 rootObj0.set(ByteBuffer.wrap("outer".getBytes()));
                 c.runTransaction(t1 -> {
-                    final GoshawkObj rootObj1 = t1.getRoot();
+                    final GoshawkObj rootObj1 = getRoot(t1);
                     final String found1 = byteBufferToString(rootObj1.getValue(), "outer".length());
                     assertEquals("Expected to find 'outer' but found " + found1, "outer", found1);
                     rootObj1.set(ByteBuffer.wrap("mid".getBytes()));
                     final boolean aborted = c.runTransaction(t2 -> {
-                        final GoshawkObj rootObj2 = t2.getRoot();
+                        final GoshawkObj rootObj2 = getRoot(t2);
                         final String found2 = byteBufferToString(rootObj2.getValue(), "mid".length());
                         assertEquals("Expected to find 'mid' but found " + found2, "mid", found2);
                         rootObj1.set(ByteBuffer.wrap("inner".getBytes()));
@@ -138,13 +138,13 @@ public class NestedTest extends TestBase {
                     retryLatch.await();
                     Thread.sleep(250);
                     c.runTransaction(txn -> {
-                        txn.getRoot().set(ByteBuffer.wrap("magic".getBytes()));
+                        getRoot(txn).set(ByteBuffer.wrap("magic".getBytes()));
                         return null;
                     });
 
                 } else {
                     c.runTransaction(t0 -> {
-                        final GoshawkObj rootObj0 = t0.getRoot();
+                        final GoshawkObj rootObj0 = getRoot(t0);
                         assertNotNull(rootObj0);
                         final String found0 = byteBufferToString(rootObj0.getValue(), "magic".length());
                         if ("magic".equals(found0)) {
@@ -173,10 +173,10 @@ public class NestedTest extends TestBase {
             // directly usable and writable.
             final Connection c = createConnections(1)[0];
             c.runTransaction(t0 -> {
-                final GoshawkObj rootObj0 = t0.getRoot();
+                final GoshawkObj rootObj0 = getRoot(t0);
                 final GoshawkObj obj0 = c.runTransaction(t1 -> {
                     final GoshawkObj obj1 = t1.createObject(ByteBuffer.wrap("Hello".getBytes()));
-                    t1.getRoot().set(null, obj1);
+                    getRoot(t1).set(null, obj1);
                     return obj1;
                 }).result;
                 final GoshawkObj[] refs = rootObj0.getReferences();
@@ -190,7 +190,7 @@ public class NestedTest extends TestBase {
             });
 
             final String val1 = c.runTransaction(t0 ->
-                    byteBufferToString(t0.getRoot().getReferences()[0].getValue(), "Goodbye".length())
+                    byteBufferToString(getRoot(t0).getReferences()[0].getValue(), "Goodbye".length())
             ).result;
             assertEquals("Expected to find 'Goodbye' as value of obj0. Instead found " + val1, "Goodbye", val1);
         } finally {
