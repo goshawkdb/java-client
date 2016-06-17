@@ -36,7 +36,7 @@ public class PingPongTest extends TestBase {
                 boolean inProgress = true;
                 while (inProgress) {
                     inProgress = c.runTransaction(txn -> {
-                        final GoshawkObj root = txn.getRoot();
+                        final GoshawkObj root = getRoot(txn);
                         final ByteBuffer valBuf = root.getValue().order(ByteOrder.BIG_ENDIAN);
                         final long val = valBuf.getLong(0);
                         if (val > limit) {

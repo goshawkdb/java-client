@@ -35,7 +35,7 @@ public class ParCountTest extends TestBase {
             inParallel(threadCount, (final int tId, final Connection c, final Queue<Exception> exceptionQ) -> {
                 awaitRootVersionChange(c, origRootVsn);
                 final VarUUId objId = c.runTransaction(txn ->
-                        txn.getRoot().getReferences()[tId].id
+                        getRoot(txn).getReferences()[tId].id
                 ).result;
                 final long start = System.nanoTime();
                 long expected = 0L;

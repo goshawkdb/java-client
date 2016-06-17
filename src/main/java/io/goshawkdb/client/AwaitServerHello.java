@@ -17,7 +17,7 @@ final class AwaitServerHello extends ChannelInboundHandlerAdapter {
         if (msg instanceof MessageReaderRefCount) {
             final MessageReaderRefCount read = (MessageReaderRefCount) msg;
             final ConnectionCap.HelloClientFromServer.Reader hello = read.msg.getRoot(ConnectionCap.HelloClientFromServer.factory);
-            if (hello != null && hello.hasRootId()) {
+            if (hello != null && hello.hasRoots()) {
                 ctx.pipeline().remove(this);
                 try {
                     conn.serverHello(hello, ctx);

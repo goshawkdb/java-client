@@ -1,6 +1,7 @@
 package io.goshawkdb.client;
 
 import java.nio.ByteBuffer;
+import java.util.Map;
 
 /**
  * An object of this type is supplied to {@link TransactionFunction}s to provide access to the
@@ -16,13 +17,13 @@ public interface Transaction {
     void retry();
 
     /**
-     * Get the root of the object-graph. The Root Object is known to all clients and represents the
-     * root of the object graph. For an object to be reachable, there must be a path to it from the
-     * Root Object
+     * Get the roots of the object-graph. The Root Objects for each client are defined by the
+     * cluster configuration and represent the roots of the object graphs. For an object to be
+     * reachable, there must be a path to it from the Root Object
      *
-     * @return The Root Object.
+     * @return The Root Objects.
      */
-    GoshawkObj getRoot();
+    Map<String, GoshawkObj> getRoots();
 
     /**
      * Create a new object and set its value and references.

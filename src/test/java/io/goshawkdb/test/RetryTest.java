@@ -43,14 +43,14 @@ public class RetryTest extends TestBase {
                     Thread.sleep(250);
                     System.out.println("All retriers have retried. Going to modify value.");
                     c.runTransaction(txn -> {
-                        txn.getRoot().set(ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN).putLong(0, magicNumber));
+                        getRoot(txn).set(ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN).putLong(0, magicNumber));
                         return null;
                     });
 
                 } else {
                     final AtomicBoolean triggered = new AtomicBoolean(false);
                     final long found = c.runTransaction(txn -> {
-                        final long num = txn.getRoot().getValue().order(ByteOrder.BIG_ENDIAN).getLong(0);
+                        final long num = getRoot(txn).getValue().order(ByteOrder.BIG_ENDIAN).getLong(0);
                         if (num == 0) {
                             if (!triggered.get()) {
                                 triggered.set(true);
@@ -96,7 +96,7 @@ public class RetryTest extends TestBase {
                     retryLatch.await();
                     Thread.sleep(250);
                     c.runTransaction(txn -> {
-                        final GoshawkObj obj = txn.getRoot().getReferences()[changeIdx];
+                        final GoshawkObj obj = getRoot(txn).getReferences()[changeIdx];
                         obj.set(ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN).putLong(0, magicNumber));
                         return null;
                     });
@@ -104,7 +104,7 @@ public class RetryTest extends TestBase {
                 } else {
                     final AtomicBoolean triggered = new AtomicBoolean(false);
                     final int foundIdx = c.runTransaction(txn -> {
-                        final GoshawkObj[] objs = txn.getRoot().getReferences();
+                        final GoshawkObj[] objs = getRoot(txn).getReferences();
                         for (int idx = 0; idx < objs.length; idx++) {
                             final GoshawkObj obj = objs[idx];
                             final long v = obj.getValue().order(ByteOrder.BIG_ENDIAN).getLong(0);

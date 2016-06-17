@@ -33,7 +33,7 @@ public class SoloCountTest extends TestBase {
             for (int idx = 0; idx < 1000; idx++) {
                 final long expectedCopy = expected;
                 expected = conn.runTransaction(txn -> {
-                    final GoshawkObj root = txn.getRoot();
+                    final GoshawkObj root = getRoot(txn);
                     final ByteBuffer valBuf = root.getValue().order(ByteOrder.BIG_ENDIAN);
                     final long old = valBuf.getLong(0);
                     if (old == expectedCopy) {
