@@ -14,7 +14,7 @@ import java.security.spec.InvalidKeySpecException;
 import java.util.Queue;
 
 import io.goshawkdb.client.Connection;
-import io.goshawkdb.client.GoshawkObj;
+import io.goshawkdb.client.GoshawkObjRef;
 import io.goshawkdb.client.TxnId;
 
 import static org.junit.Assert.fail;
@@ -40,7 +40,7 @@ public class SimpleConflictTest extends TestBase {
                     final long expectedCopy = expected;
                     final long read = conn.runTransaction(txn -> {
                         System.out.println("" + tId + ": starting with expected " + expectedCopy);
-                        final GoshawkObj[] objs = getRoot(txn).getReferences();
+                        final GoshawkObjRef[] objs = getRoot(txn).getReferences();
                         final long val = objs[0].getValue().order(ByteOrder.BIG_ENDIAN).getLong(0);
                         if (val > limit) {
                             return val;

@@ -23,12 +23,12 @@ class TransactionImpl<R> implements Transaction {
     private final HashMap<VarUUId, GoshawkObj> objs = new HashMap<>();
     private final TransactionFunction<R> fun;
     private final Connection conn;
-    private final Map<String, VarUUId> roots;
+    private final Map<String, Cache.RefCap> roots;
     private final TransactionImpl<?> parent;
 
     boolean resetInProgress = false;
 
-    TransactionImpl(final TransactionFunction<R> fun, final Connection conn, Cache cache, final Map<String, VarUUId> roots, final TransactionImpl<?> parent) {
+    TransactionImpl(final TransactionFunction<R> fun, final Connection conn, Cache cache, final Map<String, Cache.RefCap> roots, final TransactionImpl<?> parent) {
         this.fun = fun;
         this.conn = conn;
         this.cache = cache;
@@ -87,32 +87,37 @@ class TransactionImpl<R> implements Transaction {
     }
 
     @Override
-    public Map<String, GoshawkObj> getRoots() {
-        final Map<String, GoshawkObj> rootObjects = new HashMap<>();
-        roots.forEach((name, vUUId) -> rootObjects.put(name, getObject(vUUId)));
+    public Map<String, GoshawkObjRef> getRoots() {
+        final Map<String, GoshawkObjRef> rootObjects = new HashMap<>();
+        roots.forEach((name, rc) -> {
+            final GoshawkObj obj = getObject(rc.vUUId, true);
+            rootObjects.put(name, new GoshawkObjRef(obj, rc.cap));
+        });
         return rootObjects;
     }
 
     @Override
-    public GoshawkObj createObject(final ByteBuffer value, final GoshawkObj... references) {
+    public GoshawkObjRef createObject(final ByteBuffer value, final GoshawkObjRef... references) {
         if (resetInProgress) {
             throw TransactionRestartRequiredException.e;
         }
-        final GoshawkObj obj = new GoshawkObj(conn.nextVarUUId(), conn);
+        final GoshawkObj obj = new GoshawkObj(conn.nextVarUUId(), Capability.ReadWrite, conn);
         objs.put(obj.id, obj);
         obj.state = new ObjectState(obj, this, value, references);
-        return obj;
+        return obj.objRef;
     }
 
     @Override
-    public GoshawkObj getObject(final VarUUId vUUId) {
+    public GoshawkObjRef getObject(final GoshawkObjRef objRef) {
         if (resetInProgress) {
             throw TransactionRestartRequiredException.e;
         }
-        return getObject(vUUId, true);
+        final GoshawkObj obj = getObject(objRef.obj.id, true);
+        objRef.obj = obj;
+        return objRef;
     }
 
-    private GoshawkObj getObject(final VarUUId vUUId, final boolean addToTxn) {
+    GoshawkObj getObject(final VarUUId vUUId, final boolean addToTxn) {
         GoshawkObj obj = objs.get(vUUId);
         if (obj != null) {
             return obj;
@@ -127,7 +132,11 @@ class TransactionImpl<R> implements Transaction {
             }
         }
         if (addToTxn) {
-            obj = new GoshawkObj(vUUId, conn);
+            final Cache.ValueRef vr = cache.get(vUUId);
+            if (vr == null) {
+                throw new IllegalArgumentException("Attempt to dereference GoshawkObjRef to unknown GoshawkObj: " + vUUId);
+            }
+            obj = new GoshawkObj(vUUId, vr.cap, conn);
             objs.put(vUUId, obj);
             obj.state = new ObjectState(obj, this);
             return obj;
@@ -262,7 +271,7 @@ class TransactionImpl<R> implements Transaction {
                 if (list == reads) {
                     action.initRead().setVersion(state.curVersion.id);
                 } else {
-                    DataList.Builder refs;
+                    StructList.Builder<TransactionCap.ClientVarIdPos.Builder> refs;
                     if (list == writes) {
                         TransactionCap.ClientAction.Write.Builder write = action.initWrite();
                         refs = write.initReferences(state.curObjectRefs.length);
@@ -278,8 +287,10 @@ class TransactionImpl<R> implements Transaction {
                         create.setValue(new Data.Reader(state.curValue, 0, state.curValue.limit()));
                     }
                     int idy = 0;
-                    for (GoshawkObj ref : state.curObjectRefs) {
-                        refs.set(idy, new Data.Reader(ref.id.id));
+                    for (GoshawkObjRef ref : state.curObjectRefs) {
+                        final TransactionCap.ClientVarIdPos.Builder refCap = refs.get(idy);
+                        ref.cap.toCapnp(refCap.initCapability());
+                        refCap.setVarId(ref.obj.id.id);
                         idy++;
                     }
                 }

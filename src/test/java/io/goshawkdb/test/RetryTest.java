@@ -16,7 +16,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.goshawkdb.client.Connection;
-import io.goshawkdb.client.GoshawkObj;
+import io.goshawkdb.client.GoshawkObjRef;
 import io.goshawkdb.client.TxnId;
 
 import static org.junit.Assert.fail;
@@ -96,7 +96,7 @@ public class RetryTest extends TestBase {
                     retryLatch.await();
                     Thread.sleep(250);
                     c.runTransaction(txn -> {
-                        final GoshawkObj obj = getRoot(txn).getReferences()[changeIdx];
+                        final GoshawkObjRef obj = getRoot(txn).getReferences()[changeIdx];
                         obj.set(ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN).putLong(0, magicNumber));
                         return null;
                     });
@@ -104,9 +104,9 @@ public class RetryTest extends TestBase {
                 } else {
                     final AtomicBoolean triggered = new AtomicBoolean(false);
                     final int foundIdx = c.runTransaction(txn -> {
-                        final GoshawkObj[] objs = getRoot(txn).getReferences();
+                        final GoshawkObjRef[] objs = getRoot(txn).getReferences();
                         for (int idx = 0; idx < objs.length; idx++) {
-                            final GoshawkObj obj = objs[idx];
+                            final GoshawkObjRef obj = objs[idx];
                             final long v = obj.getValue().order(ByteOrder.BIG_ENDIAN).getLong(0);
                             if (v != 0) {
                                 return idx;

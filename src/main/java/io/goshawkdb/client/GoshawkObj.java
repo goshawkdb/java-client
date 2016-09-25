@@ -15,14 +15,16 @@ import static io.goshawkdb.client.ConnectionFactory.VERSION_ZERO;
  * Objects of this class represent nodes in the object graph stored by GoshawkDB. They can only be
  * modified within a transaction.
  */
-public class GoshawkObj {
+class GoshawkObj {
 
     private final Connection conn;
     public final VarUUId id;
+    final GoshawkObjRef objRef;
     ObjectState state;
 
-    GoshawkObj(final VarUUId vUUId, final Connection connection) {
+    GoshawkObj(final VarUUId vUUId, final Capability capability, final Connection connection) {
         id = vUUId;
+        objRef = new GoshawkObjRef(this, capability);
         conn = connection;
     }
 
@@ -31,41 +33,24 @@ public class GoshawkObj {
         return "GoshawkObj(" + id + ")";
     }
 
-    /**
-     * Returns the current value of this object.
-     *
-     * @return The current value. The returned buffer is a copy of the underlying buffer, so
-     * modifying it is perfectly safe. If you do modify it, you will need to call one of the set
-     * methods for your modifications to take any effect.
-     */
-    public ByteBuffer getValue() {
+    ByteBuffer getValue() {
+        checkCanRead();
         checkExpired();
         maybeRecordRead(false);
         return cloneByteBuffer(state.curValue);
     }
 
-    /**
-     * Get the objects pointed to from the current object.
-     *
-     * @return the array of {@link GoshawkObj} to which the current object refers. As with getValue,
-     * the array is a copy of the underlying array, so you are safe to modify it, but you will need
-     * to call one of the set methods for your modifications to take any effect.
-     */
-    public GoshawkObj[] getReferences() {
+    GoshawkObjRef[] getReferences() {
+        checkCanRead();
         checkExpired();
         maybeRecordRead(false);
-        final GoshawkObj[] refs = new GoshawkObj[state.curObjectRefs.length];
+        final GoshawkObjRef[] refs = new GoshawkObjRef[state.curObjectRefs.length];
         System.arraycopy(state.curObjectRefs, 0, refs, 0, refs.length);
         return refs;
     }
 
-    /**
-     * Get the current version of the object.
-     *
-     * @return the TxnId of the last transaction that wrote to this object. This will return null if
-     * the object has been created by the current transaction.
-     */
-    public TxnId getVersion() {
+    TxnId getVersion() {
+        checkCanRead();
         checkExpired();
         if (state.create) {
             return null;
@@ -75,22 +60,8 @@ public class GoshawkObj {
 
     }
 
-    /**
-     * Sets the value and references of the current object. If the value contains any references to
-     * other objects, they must be explicitly declared as references otherwise on retrieval you will
-     * not be able to navigate to them. Note that the order of references is stable. A null value
-     * sets the value to a zero-length ByteBuffer.
-     *
-     * @param value      The value to set the object to. The buffer will be cloned and the contents
-     *                   copied. Therefore any changes you make to this param after calling this
-     *                   method will be ignored (you will need to call the set method again). The
-     *                   copying will not alter any position, limit, capacity or marks of the value
-     *                   ByteBuffer. The value is taken to be from position 0 to the current limit
-     *                   of the buffer.
-     * @param references The new list of objects to which the current object refers. Again, the
-     *                   array of references is copied.
-     */
-    public void set(final ByteBuffer value, final GoshawkObj... references) {
+    void set(final ByteBuffer value, final GoshawkObjRef... references) {
+        checkCanWrite();
         checkExpired();
         state.write = true;
         if (value == null) {
@@ -103,9 +74,9 @@ public class GoshawkObj {
             state.curValueRef = null;
         }
         if (references == null) {
-            state.curObjectRefs = new GoshawkObj[0];
+            state.curObjectRefs = new GoshawkObjRef[0];
         } else {
-            state.curObjectRefs = new GoshawkObj[references.length];
+            state.curObjectRefs = new GoshawkObjRef[references.length];
             System.arraycopy(references, 0, state.curObjectRefs, 0, references.length);
         }
     }
@@ -115,13 +86,13 @@ public class GoshawkObj {
             return;
         }
         Cache.ValueRef valueRef = state.transaction.cache.get(id);
-        if (valueRef == null) {
+        if (valueRef == null || valueRef.version == null) {
             final List<VarUUId> modifiedVars = loadVar(id, conn);
             if (state.transaction.varsUpdated(modifiedVars)) {
                 throw TransactionRestartRequiredException.e;
             }
             valueRef = state.transaction.cache.get(id);
-            if (valueRef == null) {
+            if (valueRef == null || valueRef.version == null) {
                 throw new IllegalStateException("Loading " + id + " failed to find value / update cache");
             }
         }
@@ -136,10 +107,11 @@ public class GoshawkObj {
             if (state.curValueRef != null) {
                 state.curValueRef.retain();
             }
-            final GoshawkObj[] refs = new GoshawkObj[valueRef.references.length];
+            final GoshawkObjRef[] refs = new GoshawkObjRef[valueRef.references.length];
             int idx = 0;
-            for (VarUUId vUUId : valueRef.references) {
-                refs[idx] = state.transaction.getObject(vUUId);
+            for (Cache.RefCap rc : valueRef.references) {
+                final GoshawkObj obj = state.transaction.getObject(rc.vUUId, true);
+                refs[idx] = new GoshawkObjRef(obj, rc.cap);
                 idx++;
             }
             state.curObjectRefs = refs;
@@ -151,6 +123,18 @@ public class GoshawkObj {
             throw new IllegalStateException("Use of expired object:" + id);
         } else if (state.transaction.resetInProgress) {
             throw TransactionRestartRequiredException.e;
+        }
+    }
+
+    private void checkCanRead() {
+        if (!objRef.cap.canRead()) {
+            throw new IllegalArgumentException("Cannot read object " + id);
+        }
+    }
+
+    private void checkCanWrite() {
+        if (!objRef.cap.canWrite()) {
+            throw new IllegalArgumentException("Cannot write object " + id);
         }
     }
 

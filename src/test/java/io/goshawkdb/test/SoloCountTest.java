@@ -13,7 +13,7 @@ import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
 
 import io.goshawkdb.client.Connection;
-import io.goshawkdb.client.GoshawkObj;
+import io.goshawkdb.client.GoshawkObjRef;
 
 import static org.junit.Assert.fail;
 
@@ -33,7 +33,7 @@ public class SoloCountTest extends TestBase {
             for (int idx = 0; idx < 1000; idx++) {
                 final long expectedCopy = expected;
                 expected = conn.runTransaction(txn -> {
-                    final GoshawkObj root = getRoot(txn);
+                    final GoshawkObjRef root = getRoot(txn);
                     final ByteBuffer valBuf = root.getValue().order(ByteOrder.BIG_ENDIAN);
                     final long old = valBuf.getLong(0);
                     if (old == expectedCopy) {

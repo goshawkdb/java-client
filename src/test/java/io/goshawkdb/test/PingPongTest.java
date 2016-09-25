@@ -14,7 +14,7 @@ import java.security.spec.InvalidKeySpecException;
 import java.util.Queue;
 
 import io.goshawkdb.client.Connection;
-import io.goshawkdb.client.GoshawkObj;
+import io.goshawkdb.client.GoshawkObjRef;
 import io.goshawkdb.client.TxnId;
 
 import static org.junit.Assert.fail;
@@ -36,7 +36,7 @@ public class PingPongTest extends TestBase {
                 boolean inProgress = true;
                 while (inProgress) {
                     inProgress = c.runTransaction(txn -> {
-                        final GoshawkObj root = getRoot(txn);
+                        final GoshawkObjRef root = getRoot(txn);
                         final ByteBuffer valBuf = root.getValue().order(ByteOrder.BIG_ENDIAN);
                         final long val = valBuf.getLong(0);
                         if (val > limit) {

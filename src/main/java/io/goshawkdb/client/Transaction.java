@@ -23,7 +23,7 @@ public interface Transaction {
      *
      * @return The Root Objects.
      */
-    Map<String, GoshawkObj> getRoots();
+    Map<String, GoshawkObjRef> getRoots();
 
     /**
      * Create a new object and set its value and references.
@@ -38,7 +38,7 @@ public interface Transaction {
      *                   references is copied.
      * @return The new object
      */
-    GoshawkObj createObject(final ByteBuffer value, final GoshawkObj... references);
+    GoshawkObjRef createObject(final ByteBuffer value, final GoshawkObjRef... references);
 
     /**
      * Fetches the object specified by its unique object id. Note this will fail unless the client
@@ -49,5 +49,5 @@ public interface Transaction {
      * @param vUUId The id of the object to fetch
      * @return The object
      */
-    GoshawkObj getObject(final VarUUId vUUId);
+    GoshawkObjRef getObject(final GoshawkObjRef objRef);
 }

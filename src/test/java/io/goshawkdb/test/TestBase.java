@@ -19,7 +19,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import io.goshawkdb.client.Certs;
 import io.goshawkdb.client.Connection;
 import io.goshawkdb.client.ConnectionFactory;
-import io.goshawkdb.client.GoshawkObj;
+import io.goshawkdb.client.GoshawkObjRef;
 import io.goshawkdb.client.Transaction;
 import io.goshawkdb.client.TxnId;
 
@@ -81,8 +81,8 @@ public class TestBase {
         final Thread[] threads = new Thread[parCount];
         for (int idx = 0; idx < parCount; idx++) {
             final int idxCopy = idx;
+            final Connection conn = conns[idxCopy];
             threads[idx] = new Thread(() -> {
-                final Connection conn = conns[idxCopy];
                 try {
                     runner.run(idxCopy, conn, exceptionQueue);
                 } catch (final Exception e) {
@@ -102,8 +102,8 @@ public class TestBase {
         }
     }
 
-    protected GoshawkObj getRoot(final Transaction txn) {
-        final GoshawkObj root = txn.getRoots().get(rootName);
+    protected GoshawkObjRef getRoot(final Transaction txn) {
+        final GoshawkObjRef root = txn.getRoots().get(rootName);
         if (root == null) {
             throw new IllegalStateException("No root named '" + rootName + "' is available");
         }
@@ -115,7 +115,7 @@ public class TestBase {
      */
     protected TxnId setRootToZeroInt64(final Connection c) {
         return c.runTransaction(txn -> {
-            final GoshawkObj root = getRoot(txn);
+            final GoshawkObjRef root = getRoot(txn);
             root.set(ByteBuffer.allocate(8));
             return root.getVersion();
         }).result;
@@ -127,11 +127,11 @@ public class TestBase {
      */
     protected TxnId setRootToNZeroObjs(final Connection c, final int n) {
         return c.runTransaction(txn -> {
-            final GoshawkObj[] objs = new GoshawkObj[n];
+            final GoshawkObjRef[] objs = new GoshawkObjRef[n];
             for (int idx = 0; idx < n; idx++) {
                 objs[idx] = txn.createObject(ByteBuffer.allocate(8));
             }
-            final GoshawkObj root = getRoot(txn);
+            final GoshawkObjRef root = getRoot(txn);
             root.set(ByteBuffer.allocate(0), objs);
             return root.getVersion();
         }).result;
@@ -139,7 +139,7 @@ public class TestBase {
 
     protected TxnId awaitRootVersionChange(final Connection c, final TxnId oldVsn) {
         return c.runTransaction(txn -> {
-            final GoshawkObj root = getRoot(txn);
+            final GoshawkObjRef root = getRoot(txn);
             if (root.getVersion().equals(oldVsn)) {
                 txn.retry();
             }

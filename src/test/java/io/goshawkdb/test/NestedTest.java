@@ -14,13 +14,14 @@ import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
 
 import io.goshawkdb.client.Connection;
-import io.goshawkdb.client.GoshawkObj;
+import io.goshawkdb.client.GoshawkObjRef;
 import io.goshawkdb.client.TransactionAbortedException;
 import io.goshawkdb.client.TxnId;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public class NestedTest extends TestBase {
@@ -35,14 +36,14 @@ public class NestedTest extends TestBase {
 
             // Just read the root var from several nested txns
             final int r0 = c.runTransaction(t0 -> {
-                final GoshawkObj rootObj0 = getRoot(t0);
+                final GoshawkObjRef rootObj0 = getRoot(t0);
                 assertNotNull(rootObj0);
                 final int r1 = c.runTransaction(t1 -> {
-                    final GoshawkObj rootObj1 = getRoot(t1);
-                    assertSame("Should have pointer equality between the same object in nested txns", rootObj0, rootObj1);
+                    final GoshawkObjRef rootObj1 = getRoot(t1);
+                    assertTrue("Should have pointer equality between the same object in nested txns", rootObj0.referencesSameAs(rootObj1));
                     final int r2 = c.runTransaction(t2 -> {
-                        final GoshawkObj rootObj2 = getRoot(t2);
-                        assertSame("Should have pointer equality between the same object in nested txns", rootObj1, rootObj2);
+                        final GoshawkObjRef rootObj2 = getRoot(t2);
+                        assertTrue("Should have pointer equality between the same object in nested txns", rootObj1.referencesSameAs(rootObj2));
                         return 42;
                     }).result;
                     assertEquals("Expecting to get 42 back from nested txn but got " + r2, 42, r2);
@@ -64,16 +65,16 @@ public class NestedTest extends TestBase {
 
             // A write made in a parent should be visible in the child
             c.runTransaction(t0 -> {
-                final GoshawkObj rootObj0 = getRoot(t0);
+                final GoshawkObjRef rootObj0 = getRoot(t0);
                 assertNotNull(rootObj0);
                 rootObj0.set(ByteBuffer.wrap("outer".getBytes()));
                 c.runTransaction(t1 -> {
-                    final GoshawkObj rootObj1 = getRoot(t1);
+                    final GoshawkObjRef rootObj1 = getRoot(t1);
                     final String found1 = byteBufferToString(rootObj1.getValue(), "outer".length());
                     assertEquals("Expected to find 'outer' but found " + found1, "outer", found1);
                     rootObj1.set(ByteBuffer.wrap("mid".getBytes()));
                     c.runTransaction(t2 -> {
-                        final GoshawkObj rootObj2 = getRoot(t2);
+                        final GoshawkObjRef rootObj2 = getRoot(t2);
                         final String found2 = byteBufferToString(rootObj2.getValue(), "mid".length());
                         assertEquals("Expected to find 'mid' but found " + found2, "mid", found2);
                         rootObj1.set(ByteBuffer.wrap("inner".getBytes()));
@@ -99,16 +100,16 @@ public class NestedTest extends TestBase {
 
             // A write made in a child which is aborted should not be seen in the parent.
             c.runTransaction(t0 -> {
-                final GoshawkObj rootObj0 = getRoot(t0);
+                final GoshawkObjRef rootObj0 = getRoot(t0);
                 assertNotNull(rootObj0);
                 rootObj0.set(ByteBuffer.wrap("outer".getBytes()));
                 c.runTransaction(t1 -> {
-                    final GoshawkObj rootObj1 = getRoot(t1);
+                    final GoshawkObjRef rootObj1 = getRoot(t1);
                     final String found1 = byteBufferToString(rootObj1.getValue(), "outer".length());
                     assertEquals("Expected to find 'outer' but found " + found1, "outer", found1);
                     rootObj1.set(ByteBuffer.wrap("mid".getBytes()));
                     final boolean aborted = c.runTransaction(t2 -> {
-                        final GoshawkObj rootObj2 = getRoot(t2);
+                        final GoshawkObjRef rootObj2 = getRoot(t2);
                         final String found2 = byteBufferToString(rootObj2.getValue(), "mid".length());
                         assertEquals("Expected to find 'mid' but found " + found2, "mid", found2);
                         rootObj1.set(ByteBuffer.wrap("inner".getBytes()));
@@ -144,7 +145,7 @@ public class NestedTest extends TestBase {
 
                 } else {
                     c.runTransaction(t0 -> {
-                        final GoshawkObj rootObj0 = getRoot(t0);
+                        final GoshawkObjRef rootObj0 = getRoot(t0);
                         assertNotNull(rootObj0);
                         final String found0 = byteBufferToString(rootObj0.getValue(), "magic".length());
                         if ("magic".equals(found0)) {
@@ -173,13 +174,13 @@ public class NestedTest extends TestBase {
             // directly usable and writable.
             final Connection c = createConnections(1)[0];
             c.runTransaction(t0 -> {
-                final GoshawkObj rootObj0 = getRoot(t0);
-                final GoshawkObj obj0 = c.runTransaction(t1 -> {
-                    final GoshawkObj obj1 = t1.createObject(ByteBuffer.wrap("Hello".getBytes()));
+                final GoshawkObjRef rootObj0 = getRoot(t0);
+                final GoshawkObjRef obj0 = c.runTransaction(t1 -> {
+                    final GoshawkObjRef obj1 = t1.createObject(ByteBuffer.wrap("Hello".getBytes()));
                     getRoot(t1).set(null, obj1);
                     return obj1;
                 }).result;
-                final GoshawkObj[] refs = rootObj0.getReferences();
+                final GoshawkObjRef[] refs = rootObj0.getReferences();
                 if (refs.length != 1 || refs[0] != obj0) {
                     fail("Expected to find obj0 as only ref from root. Instead found " + refs);
                 }

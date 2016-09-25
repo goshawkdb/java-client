@@ -238,14 +238,14 @@ public final class ConnectionCap {
       public final org.capnproto.Data.Builder initVarId(int size) {
         return _initPointerField(org.capnproto.Data.factory, 1, size);
       }
-      public final io.goshawkdb.client.capnp.CapabilitiesCap.Capabilities.Builder getCapabilities() {
-        return _getPointerField(io.goshawkdb.client.capnp.CapabilitiesCap.Capabilities.factory, 2, null, 0);
+      public final io.goshawkdb.client.capnp.CapabilitiesCap.Capability.Builder getCapability() {
+        return _getPointerField(io.goshawkdb.client.capnp.CapabilitiesCap.Capability.factory, 2, null, 0);
       }
-      public final void setCapabilities(io.goshawkdb.client.capnp.CapabilitiesCap.Capabilities.Reader value) {
-        _setPointerField(io.goshawkdb.client.capnp.CapabilitiesCap.Capabilities.factory,2, value);
+      public final void setCapability(io.goshawkdb.client.capnp.CapabilitiesCap.Capability.Reader value) {
+        _setPointerField(io.goshawkdb.client.capnp.CapabilitiesCap.Capability.factory,2, value);
       }
-      public final io.goshawkdb.client.capnp.CapabilitiesCap.Capabilities.Builder initCapabilities() {
-        return _initPointerField(io.goshawkdb.client.capnp.CapabilitiesCap.Capabilities.factory,2, 0);
+      public final io.goshawkdb.client.capnp.CapabilitiesCap.Capability.Builder initCapability() {
+        return _initPointerField(io.goshawkdb.client.capnp.CapabilitiesCap.Capability.factory,2, 0);
       }
     }
 
@@ -268,11 +268,11 @@ public final class ConnectionCap {
         return _getPointerField(org.capnproto.Data.factory, 1, null, 0, 0);
       }
 
-      public boolean hasCapabilities() {
+      public boolean hasCapability() {
         return !_pointerFieldIsNull(2);
       }
-      public io.goshawkdb.client.capnp.CapabilitiesCap.Capabilities.Reader getCapabilities() {
-        return _getPointerField(io.goshawkdb.client.capnp.CapabilitiesCap.Capabilities.factory,2,null, 0);
+      public io.goshawkdb.client.capnp.CapabilitiesCap.Capability.Reader getCapability() {
+        return _getPointerField(io.goshawkdb.client.capnp.CapabilitiesCap.Capability.factory,2,null, 0);
       }
 
     }
@@ -581,7 +581,7 @@ public static final org.capnproto.SegmentReader b_dfc40d83c4952756 =
    "\u0002\u0000\u0000\u0000\u0002\u0000\u0000\u0000" +
    "\u0000\u0000\u0001\u0000\u0002\u0000\u0000\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u004d\u0000\u0000\u0000\u006a\u0000\u0000\u0000" +
+   "\u004d\u0000\u0000\u0000\u005a\u0000\u0000\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
    "\u004c\u0000\u0000\u0000\u0003\u0000\u0001\u0000" +
    "\u0058\u0000\u0000\u0000\u0002\u0000\u0001\u0000" +
@@ -602,9 +602,9 @@ public static final org.capnproto.SegmentReader b_dfc40d83c4952756 =
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
    "\u0063\u0061\u0070\u0061\u0062\u0069\u006c\u0069" +
-   "\u0074\u0069\u0065\u0073\u0000\u0000\u0000\u0000" +
+   "\u0074\u0079\u0000\u0000\u0000\u0000\u0000\u0000" +
    "\u0010\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0034\u0067\u00f3\u00ac\u008a\u0000\u00db\u00e5" +
+   "\u0084\u007a\u001c\u0059\u0028\u0069\u0097\u00a2" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
    "\u0010\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +

@@ -14,9 +14,9 @@ import java.security.spec.InvalidKeySpecException;
 import java.util.Queue;
 
 import io.goshawkdb.client.Connection;
-import io.goshawkdb.client.GoshawkObj;
+import io.goshawkdb.client.GoshawkObjRef;
+import io.goshawkdb.client.TransactionResult;
 import io.goshawkdb.client.TxnId;
-import io.goshawkdb.client.VarUUId;
 
 import static org.junit.Assert.fail;
 
@@ -34,15 +34,15 @@ public class ParCountTest extends TestBase {
 
             inParallel(threadCount, (final int tId, final Connection c, final Queue<Exception> exceptionQ) -> {
                 awaitRootVersionChange(c, origRootVsn);
-                final VarUUId objId = c.runTransaction(txn ->
-                        getRoot(txn).getReferences()[tId].id
+                final GoshawkObjRef objRef = c.runTransaction(txn ->
+                    getRoot(txn).getReferences()[tId]
                 ).result;
                 final long start = System.nanoTime();
                 long expected = 0L;
                 for (int idx = 0; idx < 1000; idx++) {
                     final long expectedCopy = expected;
                     expected = c.runTransaction(txn -> {
-                        final GoshawkObj obj = txn.getObject(objId);
+                        final GoshawkObjRef obj = txn.getObject(objRef);
                         final ByteBuffer valBuf = obj.getValue().order(ByteOrder.BIG_ENDIAN);
                         final long old = valBuf.getLong(0);
                         if (old == expectedCopy) {
