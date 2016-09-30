@@ -15,7 +15,6 @@ import java.util.Queue;
 
 import io.goshawkdb.client.Connection;
 import io.goshawkdb.client.GoshawkObjRef;
-import io.goshawkdb.client.TransactionResult;
 import io.goshawkdb.client.TxnId;
 
 import static org.junit.Assert.fail;
@@ -35,7 +34,7 @@ public class ParCountTest extends TestBase {
             inParallel(threadCount, (final int tId, final Connection c, final Queue<Exception> exceptionQ) -> {
                 awaitRootVersionChange(c, origRootVsn);
                 final GoshawkObjRef objRef = c.runTransaction(txn ->
-                    getRoot(txn).getReferences()[tId]
+                        getRoot(txn).getReferences()[tId]
                 ).result;
                 final long start = System.nanoTime();
                 long expected = 0L;
