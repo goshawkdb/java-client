@@ -4,7 +4,7 @@ import java.nio.ByteBuffer;
 
 import static io.goshawkdb.client.GoshawkObj.cloneByteBuffer;
 
-class ObjectState {
+final class ObjectState {
 
     final GoshawkObj obj;
 

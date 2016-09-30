@@ -16,7 +16,7 @@ import io.goshawkdb.client.capnp.TransactionCap;
 
 import static io.goshawkdb.client.ConnectionFactory.VERSION_ZERO;
 
-class TransactionImpl<R> implements Transaction {
+final class TransactionImpl<R> implements Transaction {
 
     final Cache cache;
     private final HashMap<VarUUId, GoshawkObj> objs = new HashMap<>();

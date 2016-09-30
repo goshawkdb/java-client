@@ -11,11 +11,7 @@ import io.goshawkdb.client.capnp.TransactionCap;
 
 import static io.goshawkdb.client.ConnectionFactory.VERSION_ZERO;
 
-/**
- * Objects of this class represent nodes in the object graph stored by GoshawkDB. They can only be
- * modified within a transaction.
- */
-class GoshawkObj {
+final class GoshawkObj {
 
     private final Connection conn;
     public final VarUUId id;

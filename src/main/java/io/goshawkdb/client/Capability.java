@@ -2,8 +2,33 @@ package io.goshawkdb.client;
 
 import io.goshawkdb.client.capnp.CapabilitiesCap;
 
+/**
+ * GoshawkDB provides security through use of Object Capabilities. A reference / pointer to an
+ * Object within GoshawkDB contains a capability. These capabilities grant the ability for a client
+ * to read, write, both or neither, an object. The GoshawkDB server enforces that all actions within
+ * a transaction are legal based on the capabilities the client has received.
+ */
 public enum Capability {
-    None, Read, Write, ReadWrite;
+    /**
+     * An ObjectRef with the None capability grants you no actions on
+     * the object.
+     */
+    None,
+    /**
+     * An ObjectRef with the Read capability grants you the ability to
+     * read the object value, its version and its references.
+     */
+    Read,
+    /**
+     * An ObjectRef with the Write capability grants you the ability to
+     * set (write) the object value and references.
+     */
+    Write,
+    /**
+     * An ObjectRef with the ReadWrite capability grants you both the
+     * Read and Write capabilities.
+     */
+    ReadWrite;
 
     Capability union(Capability that) {
         if (this == that) {
@@ -21,10 +46,20 @@ public enum Capability {
         }
     }
 
+    /**
+     * Tests to see if the capability is either Read or ReadWrite.
+     *
+     * @return true iff this == Read || this == ReadWrite;
+     */
     public boolean canRead() {
         return this == Read || this == ReadWrite;
     }
 
+    /**
+     * Tests to see if the capability is either Write or ReadWrite.
+     *
+     * @return true iff this == Write || this == ReadWrite;
+     */
     public boolean canWrite() {
         return this == Write || this == ReadWrite;
     }
