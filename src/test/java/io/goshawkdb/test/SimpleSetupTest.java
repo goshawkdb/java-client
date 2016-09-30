@@ -15,9 +15,11 @@ import java.security.spec.InvalidKeySpecException;
 import io.goshawkdb.client.Certs;
 import io.goshawkdb.client.Connection;
 import io.goshawkdb.client.ConnectionFactory;
+import io.goshawkdb.client.TransactionResult;
 
 import static io.goshawkdb.test.TestBase.getEnv;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 /**
  * @author pidster
@@ -39,9 +41,10 @@ public class SimpleSetupTest {
         final ConnectionFactory factory = new ConnectionFactory();
 
         // try-with-resources auto-closes the connection
-        try (final Connection connection = factory.connect(certs, hosts[0])) {
-            final int result = connection.runTransaction(t -> 1).result;
-            assertEquals(1, result);
+        try (final Connection c = factory.connect(certs, hosts[0])) {
+            TransactionResult<Integer> result = c.runTransaction(t -> 1);
+            assertEquals(1, result.result.intValue());
+            assertNull(result.cause);
         }
     }
 }

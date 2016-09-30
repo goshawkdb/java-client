@@ -4,7 +4,7 @@ import java.util.List;
 
 import io.goshawkdb.client.capnp.TransactionCap;
 
-class TxnSubmissionResult {
+final class TxnSubmissionResult {
 
     TransactionCap.ClientTxnOutcome.Reader outcome;
     List<VarUUId> modifiedVars;

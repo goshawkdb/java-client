@@ -1,7 +1,6 @@
 package io.goshawkdb.client;
 
 import org.capnproto.Data;
-import org.capnproto.DataList;
 import org.capnproto.StructList;
 
 import java.nio.ByteBuffer;
@@ -9,15 +8,28 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
+import io.goshawkdb.client.capnp.CapabilitiesCap;
 import io.goshawkdb.client.capnp.TransactionCap;
 
 final class Cache {
     static class ValueRef {
         TxnId version;
         ByteBuffer value;
-        VarUUId[] references;
+        RefCap[] references;
         MessageReaderRefCount reader;
+        Capability cap;
+    }
+
+    static class RefCap {
+        final VarUUId vUUId;
+        final Capability cap;
+
+        RefCap(final VarUUId varUUId, final CapabilitiesCap.Capability.Reader capReader) {
+            vUUId = varUUId;
+            cap = Capability.fromCapnp(capReader);
+        }
     }
 
     private final Object lock = new Object();
@@ -27,12 +39,20 @@ final class Cache {
     }
 
     void clear() {
-        m.forEach(((varUUId, valueRef) -> {
+        m.forEach(((vUUId, valueRef) -> {
             if (valueRef.reader != null) {
                 valueRef.reader.release();
             }
         }));
         m.clear();
+    }
+
+    void setRoots(final Map<String, RefCap> roots) {
+        roots.forEach((name, rc) -> {
+            final ValueRef vr = new ValueRef();
+            vr.cap = rc.cap;
+            m.put(rc.vUUId, vr);
+        });
     }
 
     ValueRef get(final VarUUId vUUId) {
@@ -50,20 +70,20 @@ final class Cache {
                 switch (action.which()) {
                     case WRITE: {
                         final TransactionCap.ClientAction.Write.Reader write = action.getWrite();
-                        final DataList.Reader refs = write.getReferences();
-                        updateFromWrite(txnId, vUUId, write.getValue(), refs, null);
+                        final StructList.Reader<TransactionCap.ClientVarIdPos.Reader> refs = write.getReferences();
+                        updateFromWrite(txnId, vUUId, write.getValue(), refs, null, false);
                         break;
                     }
                     case READWRITE: {
                         final TransactionCap.ClientAction.Readwrite.Reader rw = action.getReadwrite();
-                        final DataList.Reader refs = rw.getReferences();
-                        updateFromWrite(txnId, vUUId, rw.getValue(), refs, null);
+                        final StructList.Reader<TransactionCap.ClientVarIdPos.Reader> refs = rw.getReferences();
+                        updateFromWrite(txnId, vUUId, rw.getValue(), refs, null, false);
                         break;
                     }
                     case CREATE: {
                         final TransactionCap.ClientAction.Create.Reader create = action.getCreate();
-                        final DataList.Reader refs = create.getReferences();
-                        updateFromWrite(txnId, vUUId, create.getValue(), refs, null);
+                        final StructList.Reader<TransactionCap.ClientVarIdPos.Reader> refs = create.getReferences();
+                        updateFromWrite(txnId, vUUId, create.getValue(), refs, null, true);
                         break;
                     }
                 }
@@ -90,8 +110,8 @@ final class Cache {
                             // We're missing TxnId and TxnId made a write of id (to
                             // version TxnId).
                             final TransactionCap.ClientAction.Write.Reader write = action.getWrite();
-                            final DataList.Reader refs = write.getReferences();
-                            if (updateFromWrite(txnId, vUUId, write.getValue(), refs, reader)) {
+                            final StructList.Reader<TransactionCap.ClientVarIdPos.Reader> refs = write.getReferences();
+                            if (updateFromWrite(txnId, vUUId, write.getValue(), refs, reader, false)) {
                                 modifiedVars.add(vUUId);
                             }
                             break;
@@ -104,31 +124,35 @@ final class Cache {
     }
 
     private void updateFromDelete(final VarUUId vUUId, final TxnId txnId) {
-        final ValueRef vr = m.remove(vUUId);
-        if (vr == null) {
+        final ValueRef vr = m.get(vUUId);
+        if (vr == null || vr.version == null) {
             throw new IllegalStateException("Divergence discovered on deletion of " + vUUId + ": server thinks we had it cached, but we don't!");
         } else if (vr.version.equals(txnId)) {
             throw new IllegalStateException("Divergence discovered on deletion of " + vUUId + ": server thinks we don't have " + txnId + " but we do!");
-        } else if (vr.reader != null) {
-            vr.reader.release();
+        } else {
+            vr.version = null;
+            vr.value = null;
+            vr.references = null;
+            if (vr.reader != null) {
+                vr.reader.release();
+                vr.reader = null;
+            }
         }
     }
 
-    private boolean updateFromWrite(final TxnId txnId, final VarUUId vUUId, final Data.Reader value, final DataList.Reader refs, final MessageReaderRefCount reader) {
+    private boolean updateFromWrite(final TxnId txnId, final VarUUId vUUId, final Data.Reader value, final StructList.Reader<TransactionCap.ClientVarIdPos.Reader> refs, final MessageReaderRefCount reader, final boolean created) {
         ValueRef vr = m.get(vUUId);
-        final boolean missing = vr == null;
-        final VarUUId[] references = new VarUUId[refs.size()];
-        if (missing) {
+        final boolean updated = vr != null && vr.version != null;
+        final RefCap[] references = new RefCap[refs.size()];
+        if (vr == null) {
             vr = new ValueRef();
-            vr.references = references;
             m.put(vUUId, vr);
-        } else if (vr.version.equals(txnId)) {
+        } else if (vr.version != null && vr.version.equals(txnId)) {
             throw new IllegalStateException("Divergence discovered on update of " + vUUId + ": server thinks we don't have " + txnId + " but we do!");
-        } else {
-            // Must use the new array because there could be txns in
-            // progress that still have pointers to the old array.
-            vr.references = references;
         }
+        // Must use the new array because there could be txns in
+        // progress that still have pointers to the old array.
+        vr.references = references;
         vr.version = txnId;
         vr.value = value.asByteBuffer().asReadOnlyBuffer().slice();
         if (reader != null) {
@@ -138,13 +162,28 @@ final class Cache {
             vr.reader.release();
         }
         vr.reader = reader;
-        final Iterator<Data.Reader> refsIt = refs.iterator();
+        if (created) {
+            vr.cap = Capability.ReadWrite;
+        }
+        final Iterator<TransactionCap.ClientVarIdPos.Reader> refsIt = refs.iterator();
         int idx = 0;
         while (refsIt.hasNext()) {
-            vr.references[idx] = new VarUUId(refsIt.next().asByteBuffer());
+            final TransactionCap.ClientVarIdPos.Reader ref = refsIt.next();
+            final RefCap rc = new RefCap(new VarUUId(ref.getVarId().asByteBuffer()), ref.getCapability());
+            references[idx] = rc;
             idx++;
+            vr = m.get(rc.vUUId);
+            if (vr == null) {
+                vr = new ValueRef();
+                vr.cap = rc.cap;
+                m.put(rc.vUUId, vr);
+            } else if (vr.cap == null) {
+                vr.cap = rc.cap;
+            } else {
+                vr.cap = vr.cap.union(rc.cap);
+            }
         }
-        return !missing;
+        return updated;
     }
 
 }

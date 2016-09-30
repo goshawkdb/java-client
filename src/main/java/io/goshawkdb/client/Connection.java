@@ -90,7 +90,7 @@ public class Connection implements AutoCloseable {
     private ChannelFuture connectFuture;
     private State state;
     private ChannelPipeline pipeline;
-    private Map<String, VarUUId> roots;
+    private Map<String, Cache.RefCap> roots;
     private ByteBuffer nameSpace;
     private long nextVarUUId;
     private long nextTxnId;
@@ -195,7 +195,7 @@ public class Connection implements AutoCloseable {
      * @throws Exception The transaction may through exceptions.
      */
     public <R> TransactionResult<R> runTransaction(final TransactionFunction<R> fun) {
-        final Map<String, VarUUId> r;
+        final Map<String, Cache.RefCap> r;
         final TransactionImpl<?> oldTxn;
         synchronized (lock) {
             if (roots == null) {
@@ -232,11 +232,12 @@ public class Connection implements AutoCloseable {
             lock.notifyAll();
             throw new IllegalStateException("Cluster is not yet formed; No roots have been created.");
         } else {
-            final Map<String, VarUUId> roots = new HashMap<>();
+            final Map<String, Cache.RefCap> roots = new HashMap<>();
             for (ConnectionCap.Root.Reader reader : rootsCap) {
                 final VarUUId rootId = new VarUUId(reader.getVarId().asByteBuffer());
-                roots.put(reader.getName().toString(), rootId);
+                roots.put(reader.getName().toString(), new Cache.RefCap(rootId, reader.getCapability()));
             }
+            cache.setRoots(roots);
             nextState(ctx);
             synchronized (lock) {
                 pipeline = ctx.pipeline();
