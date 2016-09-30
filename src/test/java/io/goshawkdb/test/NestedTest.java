@@ -197,10 +197,4 @@ public class NestedTest extends TestBase {
             shutdown();
         }
     }
-
-    private static String byteBufferToString(final ByteBuffer buf, final int len) {
-        final byte[] ary = new byte[len];
-        buf.get(ary);
-        return new String(ary);
-    }
 }

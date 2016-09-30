@@ -104,7 +104,7 @@ public class TestBase {
         }
     }
 
-    protected <T> T runTransaction(final Connection c, final TransactionFunction<T> fun) throws RuntimeException {
+    protected <T> T runTransaction(final Connection c, final TransactionFunction<T> fun) {
         final TransactionResult<T> result = c.runTransaction(fun);
         if (result.isSuccessful()) {
             return result.result;
@@ -169,4 +169,9 @@ public class TestBase {
         factory.group.shutdownGracefully();
     }
 
+    protected static String byteBufferToString(final ByteBuffer buf, final int len) {
+        final byte[] ary = new byte[len];
+        buf.get(ary);
+        return new String(ary);
+    }
 }
