@@ -34,23 +34,23 @@ public class NestedTest extends TestBase {
             final Connection c = createConnections(1)[0];
 
             // Just read the root var from several nested txns
-            final int r0 = c.runTransaction(t0 -> {
+            final int r0 = runTransaction(c, t0 -> {
                 final GoshawkObjRef rootObj0 = getRoot(t0);
                 assertNotNull(rootObj0);
-                final int r1 = c.runTransaction(t1 -> {
+                final int r1 = runTransaction(c, t1 -> {
                     final GoshawkObjRef rootObj1 = getRoot(t1);
                     assertTrue("Should have pointer equality between the same object in nested txns", rootObj0.referencesSameAs(rootObj1));
-                    final int r2 = c.runTransaction(t2 -> {
+                    final int r2 = runTransaction(c, t2 -> {
                         final GoshawkObjRef rootObj2 = getRoot(t2);
                         assertTrue("Should have pointer equality between the same object in nested txns", rootObj1.referencesSameAs(rootObj2));
                         return 42;
-                    }).result;
+                    });
                     assertEquals("Expecting to get 42 back from nested txn but got " + r2, 42, r2);
                     return 43;
-                }).result;
+                });
                 assertEquals("Expecting to get 43 back from nested txn but got " + r1, 43, r1);
                 return 44;
-            }).result;
+            });
             assertEquals("Expecting to get 44 back from nested txn but got " + r0, 44, r0);
         } finally {
             shutdown();
@@ -63,16 +63,16 @@ public class NestedTest extends TestBase {
             final Connection c = createConnections(1)[0];
 
             // A write made in a parent should be visible in the child
-            c.runTransaction(t0 -> {
+            runTransaction(c, t0 -> {
                 final GoshawkObjRef rootObj0 = getRoot(t0);
                 assertNotNull(rootObj0);
                 rootObj0.set(ByteBuffer.wrap("outer".getBytes()));
-                c.runTransaction(t1 -> {
+                runTransaction(c, t1 -> {
                     final GoshawkObjRef rootObj1 = getRoot(t1);
                     final String found1 = byteBufferToString(rootObj1.getValue(), "outer".length());
                     assertEquals("Expected to find 'outer' but found " + found1, "outer", found1);
                     rootObj1.set(ByteBuffer.wrap("mid".getBytes()));
-                    c.runTransaction(t2 -> {
+                    runTransaction(c, t2 -> {
                         final GoshawkObjRef rootObj2 = getRoot(t2);
                         final String found2 = byteBufferToString(rootObj2.getValue(), "mid".length());
                         assertEquals("Expected to find 'mid' but found " + found2, "mid", found2);
@@ -98,11 +98,11 @@ public class NestedTest extends TestBase {
             final Connection c = createConnections(1)[0];
 
             // A write made in a child which is aborted should not be seen in the parent.
-            c.runTransaction(t0 -> {
+            runTransaction(c, t0 -> {
                 final GoshawkObjRef rootObj0 = getRoot(t0);
                 assertNotNull(rootObj0);
                 rootObj0.set(ByteBuffer.wrap("outer".getBytes()));
-                c.runTransaction(t1 -> {
+                runTransaction(c, t1 -> {
                     final GoshawkObjRef rootObj1 = getRoot(t1);
                     final String found1 = byteBufferToString(rootObj1.getValue(), "outer".length());
                     assertEquals("Expected to find 'outer' but found " + found1, "outer", found1);
@@ -137,26 +137,26 @@ public class NestedTest extends TestBase {
                     awaitRootVersionChange(c, origRootVsn);
                     retryLatch.await();
                     Thread.sleep(250);
-                    c.runTransaction(txn -> {
+                    runTransaction(c, txn -> {
                         getRoot(txn).set(ByteBuffer.wrap("magic".getBytes()));
                         return null;
                     });
 
                 } else {
-                    c.runTransaction(t0 -> {
+                    runTransaction(c, t0 -> {
                         final GoshawkObjRef rootObj0 = getRoot(t0);
                         assertNotNull(rootObj0);
                         final String found0 = byteBufferToString(rootObj0.getValue(), "magic".length());
                         if ("magic".equals(found0)) {
                             return null;
                         } else {
-                            return c.runTransaction(t1 -> {
+                            return runTransaction(c, t1 -> {
                                 // Even though we've not read root in this inner txn,
                                 // retry should still work!
                                 retryLatch.countDown();
                                 t1.retry();
                                 return null;
-                            }).result;
+                            });
                         }
                     });
                 }
@@ -172,7 +172,7 @@ public class NestedTest extends TestBase {
             // A create made in a child, returned to the parent should both be
             // directly usable and writable.
             final Connection c = createConnections(1)[0];
-            c.runTransaction(t0 -> {
+            runTransaction(c, t0 -> {
                 final GoshawkObjRef rootObj0 = getRoot(t0);
                 final GoshawkObjRef obj0 = c.runTransaction(t1 -> {
                     final GoshawkObjRef obj1 = t1.createObject(ByteBuffer.wrap("Hello".getBytes()));
@@ -189,9 +189,9 @@ public class NestedTest extends TestBase {
                 return null;
             });
 
-            final String val1 = c.runTransaction(t0 ->
+            final String val1 = runTransaction(c, t0 ->
                     byteBufferToString(getRoot(t0).getReferences()[0].getValue(), "Goodbye".length())
-            ).result;
+            );
             assertEquals("Expected to find 'Goodbye' as value of obj0. Instead found " + val1, "Goodbye", val1);
         } finally {
             shutdown();

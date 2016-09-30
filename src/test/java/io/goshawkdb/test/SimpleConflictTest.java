@@ -32,13 +32,13 @@ public class SimpleConflictTest extends TestBase {
 
             final TxnId rootOrigVsn = setRootToNZeroObjs(createConnections(1)[0], objCount);
 
-            inParallel(parCount, (final int tId, final Connection conn, final Queue<Exception> exceptionQ) -> {
-                awaitRootVersionChange(conn, rootOrigVsn);
+            inParallel(parCount, (final int tId, final Connection c, final Queue<Exception> exceptionQ) -> {
+                awaitRootVersionChange(c, rootOrigVsn);
                 long expected = 0L;
                 final ByteBuffer buf = ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN);
                 while (expected <= limit) {
                     final long expectedCopy = expected;
-                    final long read = conn.runTransaction(txn -> {
+                    final long read = runTransaction(c, txn -> {
                         System.out.println("" + tId + ": starting with expected " + expectedCopy);
                         final GoshawkObjRef[] objs = getRoot(txn).getReferences();
                         final long val = objs[0].getValue().order(ByteOrder.BIG_ENDIAN).getLong(0);
@@ -56,7 +56,7 @@ public class SimpleConflictTest extends TestBase {
                             }
                         }
                         return val + 1;
-                    }).result;
+                    });
                     if (read < expected) {
                         fail("" + tId + ": expected to read " + expected + " but read " + read);
                     }

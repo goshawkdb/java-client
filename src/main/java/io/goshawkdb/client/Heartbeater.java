@@ -1,7 +1,6 @@
 package io.goshawkdb.client;
 
 import org.capnproto.MessageBuilder;
-import org.capnproto.MessageReader;
 
 import io.goshawkdb.client.capnp.ConnectionCap;
 import io.netty.channel.ChannelDuplexHandler;

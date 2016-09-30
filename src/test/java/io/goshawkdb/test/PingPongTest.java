@@ -35,7 +35,7 @@ public class PingPongTest extends TestBase {
                 awaitRootVersionChange(c, origRootVsn);
                 boolean inProgress = true;
                 while (inProgress) {
-                    inProgress = c.runTransaction(txn -> {
+                    inProgress = runTransaction(c, txn -> {
                         final GoshawkObjRef root = getRoot(txn);
                         final ByteBuffer valBuf = root.getValue().order(ByteOrder.BIG_ENDIAN);
                         final long val = valBuf.getLong(0);
@@ -49,7 +49,7 @@ public class PingPongTest extends TestBase {
                             fail("Reached unreachable code!");
                         }
                         return true;
-                    }).result;
+                    });
                 }
             });
         } finally {

@@ -21,6 +21,8 @@ import io.goshawkdb.client.Connection;
 import io.goshawkdb.client.ConnectionFactory;
 import io.goshawkdb.client.GoshawkObjRef;
 import io.goshawkdb.client.Transaction;
+import io.goshawkdb.client.TransactionFunction;
+import io.goshawkdb.client.TransactionResult;
 import io.goshawkdb.client.TxnId;
 
 import static junit.framework.TestCase.assertNotNull;
@@ -102,6 +104,15 @@ public class TestBase {
         }
     }
 
+    protected <T> T runTransaction(final Connection c, final TransactionFunction<T> fun) throws RuntimeException {
+        final TransactionResult<T> result = c.runTransaction(fun);
+        if (result.isSuccessful()) {
+            return result.result;
+        } else {
+            throw new RuntimeException(result.cause);
+        }
+    }
+
     protected GoshawkObjRef getRoot(final Transaction txn) {
         final GoshawkObjRef root = txn.getRoots().get(rootName);
         if (root == null) {
@@ -114,11 +125,11 @@ public class TestBase {
      * Sets the root object to 8 0-bytes, with no references.
      */
     protected TxnId setRootToZeroInt64(final Connection c) {
-        return c.runTransaction(txn -> {
+        return runTransaction(c, txn -> {
             final GoshawkObjRef root = getRoot(txn);
             root.set(ByteBuffer.allocate(8));
             return root.getVersion();
-        }).result;
+        });
     }
 
     /**
@@ -126,7 +137,7 @@ public class TestBase {
      * object, which has an empty value set.
      */
     protected TxnId setRootToNZeroObjs(final Connection c, final int n) {
-        return c.runTransaction(txn -> {
+        return runTransaction(c, txn -> {
             final GoshawkObjRef[] objs = new GoshawkObjRef[n];
             for (int idx = 0; idx < n; idx++) {
                 objs[idx] = txn.createObject(ByteBuffer.allocate(8));
@@ -134,17 +145,17 @@ public class TestBase {
             final GoshawkObjRef root = getRoot(txn);
             root.set(ByteBuffer.allocate(0), objs);
             return root.getVersion();
-        }).result;
+        });
     }
 
     protected TxnId awaitRootVersionChange(final Connection c, final TxnId oldVsn) {
-        return c.runTransaction(txn -> {
+        return runTransaction(c, txn -> {
             final GoshawkObjRef root = getRoot(txn);
             if (root.getVersion().equals(oldVsn)) {
                 txn.retry();
             }
             return null;
-        }).txnid;
+        });
     }
 
     protected void shutdown() throws InterruptedException {

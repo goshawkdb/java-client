@@ -1,7 +1,6 @@
 package io.goshawkdb.client;
 
 import org.capnproto.Data;
-import org.capnproto.DataList;
 import org.capnproto.MessageBuilder;
 import org.capnproto.StructList;
 

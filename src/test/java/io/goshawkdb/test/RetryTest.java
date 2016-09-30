@@ -42,14 +42,14 @@ public class RetryTest extends TestBase {
                     retryLatch.await();
                     Thread.sleep(250);
                     System.out.println("All retriers have retried. Going to modify value.");
-                    c.runTransaction(txn -> {
+                    runTransaction(c, txn -> {
                         getRoot(txn).set(ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN).putLong(0, magicNumber));
                         return null;
                     });
 
                 } else {
                     final AtomicBoolean triggered = new AtomicBoolean(false);
-                    final long found = c.runTransaction(txn -> {
+                    final long found = runTransaction(c, txn -> {
                         final long num = getRoot(txn).getValue().order(ByteOrder.BIG_ENDIAN).getLong(0);
                         if (num == 0) {
                             if (!triggered.get()) {
@@ -65,7 +65,7 @@ public class RetryTest extends TestBase {
                         }
                         System.out.println("" + tId + ": found non-zero: " + num);
                         return num;
-                    }).result;
+                    });
                     if (found != magicNumber) {
                         fail("" + tId + ": expected to find " + magicNumber + " but found " + found);
                     }
@@ -95,7 +95,7 @@ public class RetryTest extends TestBase {
                 if (tId == 0) {
                     retryLatch.await();
                     Thread.sleep(250);
-                    c.runTransaction(txn -> {
+                    runTransaction(c, txn -> {
                         final GoshawkObjRef obj = getRoot(txn).getReferences()[changeIdx];
                         obj.set(ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN).putLong(0, magicNumber));
                         return null;
@@ -103,7 +103,7 @@ public class RetryTest extends TestBase {
 
                 } else {
                     final AtomicBoolean triggered = new AtomicBoolean(false);
-                    final int foundIdx = c.runTransaction(txn -> {
+                    final int foundIdx = runTransaction(c, txn -> {
                         final GoshawkObjRef[] objs = getRoot(txn).getReferences();
                         for (int idx = 0; idx < objs.length; idx++) {
                             final GoshawkObjRef obj = objs[idx];
@@ -119,7 +119,7 @@ public class RetryTest extends TestBase {
                         txn.retry();
                         fail("" + tId + ": Reached unreachable code");
                         return null;
-                    }).result;
+                    });
                     if (foundIdx != changeIdx) {
                         fail("" + tId + ": Expected to find " + changeIdx + " had changed, but actually found " + foundIdx);
                     }
