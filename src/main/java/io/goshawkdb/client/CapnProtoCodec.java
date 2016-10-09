@@ -38,6 +38,13 @@ final class CapnProtoCodec extends ByteToMessageCodec<MessageBuilder> {
             out.writeIntLE(seg.limit() / 8);
         }
 
+        // We've written 4 bytes for the segCount, then segCount*4 bytes for each len. But the
+        // segments themselves must start on the next 8-byte boundary. So if we segCount is even
+        // then we need to add 4 bytes of padding here.
+        if (segments.length % 2 == 0) {
+            out.writeIntLE(0);
+        }
+
         for (ByteBuffer seg : segments) {
             out.writeBytes(seg);
         }
@@ -73,6 +80,17 @@ final class CapnProtoCodec extends ByteToMessageCodec<MessageBuilder> {
                 in.resetReaderIndex();
                 throw new IOException("Too much data: " + total);
             }
+        }
+        // Same as in encode: the segments will start on an 8-byte boundary, so if we've got an even
+        // number of segments then those lengths, plus the segCount will leave us with some padding
+        // to drop here.
+        if (segCount % 2 == 0) {
+            if (available < 4) {
+                in.resetReaderIndex();
+                return;
+            }
+            in.readIntLE();
+            available -= 4;
         }
         if (available < total) {
             in.resetReaderIndex();
