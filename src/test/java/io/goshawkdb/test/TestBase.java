@@ -39,7 +39,7 @@ public class TestBase {
     private final List<Connection> connections = new ArrayList<>();
     private final String rootName;
 
-    TestBase() throws NoSuchProviderException, NoSuchAlgorithmException, CertificateException, KeyStoreException, IOException, InvalidKeySpecException, InvalidKeyException {
+    protected TestBase() throws NoSuchProviderException, NoSuchAlgorithmException, CertificateException, KeyStoreException, IOException, InvalidKeySpecException, InvalidKeyException {
         final String clusterCertPath = getEnv("CLUSTER_CERT");
         final String clientKeyPairPath = getEnv("CLIENT_KEYPAIR");
 
