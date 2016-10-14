@@ -22,8 +22,11 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.timeout.IdleStateHandler;
 
 import static io.goshawkdb.client.ConnectionFactory.BUFFER_SIZE;
+import static io.goshawkdb.client.ConnectionFactory.HEARTBEAT_INTERVAL;
+import static io.goshawkdb.client.ConnectionFactory.HEARTBEAT_INTERVAL_UNIT;
 import static io.goshawkdb.client.ConnectionFactory.KEY_LEN;
 
 /**
@@ -114,6 +117,7 @@ public class Connection implements AutoCloseable {
             @Override
             protected void initChannel(final SocketChannel ch) throws Exception {
                 final ChannelPipeline pipeline = ch.pipeline();
+                pipeline.addLast(new IdleStateHandler(2 * HEARTBEAT_INTERVAL, HEARTBEAT_INTERVAL, 0, HEARTBEAT_INTERVAL_UNIT));
                 pipeline.addLast(new CapnProtoCodec(Connection.this));
                 pipeline.addLast(new AwaitHandshake(Connection.this));
             }
@@ -270,7 +274,7 @@ public class Connection implements AutoCloseable {
                 }
                 case AwaitServerHello: {
                     state = State.Run;
-                    ctx.pipeline().addLast(new Heartbeater(ctx));
+                    ctx.pipeline().addLast(new HeartbeatHandler());
                     break;
                 }
             }
