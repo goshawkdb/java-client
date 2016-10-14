@@ -1,23 +1,24 @@
 package io.goshawkdb.client;
 
+import org.capnproto.MessageBuilder;
+
 import io.goshawkdb.client.capnp.ConnectionCap;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
-import org.capnproto.MessageBuilder;
 
-class HeartbeatHandler extends ChannelInboundHandlerAdapter {
-    // can't use SimpleChannelInboundHandler because IdleStateEvent doesn't arrive via channelRead
+final class HeartbeatHandler extends ChannelInboundHandlerAdapter {
+    // Can't use SimpleChannelInboundHandler because IdleStateEvent doesn't arrive via channelRead
 
-    private static final MessageBuilder heartbeat = new MessageBuilder();
+    private final MessageBuilder heartbeat = new MessageBuilder();
 
-    static {
+    HeartbeatHandler() {
         heartbeat.initRoot(ConnectionCap.ClientMessage.factory).setHeartbeat(null);
     }
 
     @Override
-    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+    public void userEventTriggered(final ChannelHandlerContext ctx, final Object evt) throws Exception {
         if (evt instanceof IdleStateEvent) {
             final IdleState state = ((IdleStateEvent) evt).state();
             switch (state) {
@@ -29,9 +30,10 @@ class HeartbeatHandler extends ChannelInboundHandlerAdapter {
                     ctx.channel().writeAndFlush(heartbeat);
                     return;
                 default:
-                    throw new IllegalStateException("unexpected IdleStateEvent state: " + state);
+                    throw new IllegalStateException("Unexpected IdleStateEvent state: " + state);
             }
+        } else {
+            super.userEventTriggered(ctx, evt);
         }
-        super.userEventTriggered(ctx, evt);
     }
 }

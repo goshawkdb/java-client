@@ -1,6 +1,5 @@
 package io.goshawkdb.client;
 
-import io.netty.handler.timeout.IdleStateHandler;
 import org.capnproto.MessageBuilder;
 import org.capnproto.StructList;
 
@@ -23,6 +22,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.timeout.IdleStateHandler;
 
 import static io.goshawkdb.client.ConnectionFactory.BUFFER_SIZE;
 import static io.goshawkdb.client.ConnectionFactory.HEARTBEAT_INTERVAL;
@@ -273,8 +273,8 @@ public class Connection implements AutoCloseable {
                     break;
                 }
                 case AwaitServerHello: {
-                    ctx.pipeline().addLast(new HeartbeatHandler());
                     state = State.Run;
+                    ctx.pipeline().addLast(new HeartbeatHandler());
                     break;
                 }
             }
