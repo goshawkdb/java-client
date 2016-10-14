@@ -10,6 +10,12 @@ import org.capnproto.MessageBuilder;
 class HeartbeatHandler extends ChannelInboundHandlerAdapter {
     // can't use SimpleChannelInboundHandler because IdleStateEvent doesn't arrive via channelRead
 
+    private static final MessageBuilder heartbeat = new MessageBuilder();
+
+    static {
+        heartbeat.initRoot(ConnectionCap.ClientMessage.factory).setHeartbeat(null);
+    }
+
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         if (evt instanceof IdleStateEvent) {
@@ -20,9 +26,6 @@ class HeartbeatHandler extends ChannelInboundHandlerAdapter {
                     ctx.channel().close();
                     return;
                 case WRITER_IDLE:
-                    final MessageBuilder heartbeat = new MessageBuilder();
-                    final ConnectionCap.ClientMessage.Builder msg = heartbeat.initRoot(ConnectionCap.ClientMessage.factory);
-                    msg.setHeartbeat(null);
                     ctx.channel().writeAndFlush(heartbeat);
                     return;
                 default:
