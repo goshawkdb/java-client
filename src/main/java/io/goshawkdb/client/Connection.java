@@ -118,7 +118,6 @@ public class Connection implements AutoCloseable {
             protected void initChannel(final SocketChannel ch) throws Exception {
                 final ChannelPipeline pipeline = ch.pipeline();
                 pipeline.addLast(new IdleStateHandler(2 * HEARTBEAT_INTERVAL, HEARTBEAT_INTERVAL, 0, HEARTBEAT_INTERVAL_UNIT));
-                pipeline.addLast(new HeartbeatHandler());
                 pipeline.addLast(new CapnProtoCodec(Connection.this));
                 pipeline.addLast(new AwaitHandshake(Connection.this));
             }
@@ -274,6 +273,7 @@ public class Connection implements AutoCloseable {
                     break;
                 }
                 case AwaitServerHello: {
+                    ctx.pipeline().addLast(new HeartbeatHandler());
                     state = State.Run;
                     break;
                 }
