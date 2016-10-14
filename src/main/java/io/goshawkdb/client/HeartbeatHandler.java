@@ -3,6 +3,7 @@ package io.goshawkdb.client;
 import io.goshawkdb.client.capnp.ConnectionCap;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
 import org.capnproto.MessageBuilder;
 
@@ -12,7 +13,8 @@ class HeartbeatHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         if (evt instanceof IdleStateEvent) {
-            switch (((IdleStateEvent) evt).state()) {
+            final IdleState state = ((IdleStateEvent) evt).state();
+            switch (state) {
                 case READER_IDLE:
                     System.out.println("Too many missing heartbeats. Closing connection.");
                     ctx.channel().close();
@@ -23,9 +25,8 @@ class HeartbeatHandler extends ChannelInboundHandlerAdapter {
                     msg.setHeartbeat(null);
                     ctx.channel().writeAndFlush(heartbeat);
                     return;
-                case ALL_IDLE:
-                    // shouldn't happen...
-                    break;
+                default:
+                    throw new IllegalStateException("unexpected IdleStateEvent state: " + state);
             }
         }
         super.userEventTriggered(ctx, evt);
