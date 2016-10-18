@@ -20,9 +20,15 @@ public class GoshawkObjRef {
     GoshawkObj obj;
     Capability cap;
 
+    /**
+     * The unique identifier of the object to which this reference refers.
+     */
+    public final VarUUId id;
+
     GoshawkObjRef(final GoshawkObj object, final Capability capability) {
         obj = object;
         cap = capability;
+        id = obj.id;
     }
 
     @Override

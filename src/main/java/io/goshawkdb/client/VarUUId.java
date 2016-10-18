@@ -36,4 +36,14 @@ public class VarUUId {
         }
         return false;
     }
+
+    /**
+     * Returns the object identifier as a byte array. This can be useful for example when using the
+     * collections library and you wish to use GoshawkDB Objects as keys in a collection.
+     *
+     * @return The object identifier as a byte array.
+     */
+    public byte[] asBytes() {
+        return id.clone();
+    }
 }
