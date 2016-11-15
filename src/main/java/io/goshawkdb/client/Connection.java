@@ -264,7 +264,7 @@ public class Connection implements AutoCloseable {
         }
     }
 
-    void nextState(final ChannelHandlerContext ctx) throws InterruptedException {
+    void nextState(final ChannelHandlerContext ctx) {
         synchronized (lock) {
             switch (state) {
                 case AwaitHandshake: {

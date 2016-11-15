@@ -111,8 +111,7 @@ final class TransactionImpl<R> implements Transaction {
         if (resetInProgress) {
             throw TransactionRestartRequiredException.e;
         }
-        final GoshawkObj obj = getObject(objRef.obj.id, true);
-        objRef.obj = obj;
+        objRef.obj = getObject(objRef.obj.id, true);
         return objRef;
     }
 

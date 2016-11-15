@@ -18,7 +18,7 @@ import java.nio.ByteBuffer;
  */
 public class GoshawkObjRef {
     GoshawkObj obj;
-    Capability cap;
+    final Capability cap;
 
     /**
      * The unique identifier of the object to which this reference refers.

@@ -10,6 +10,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
+import java.util.Arrays;
 import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
 
@@ -181,7 +182,7 @@ public class NestedTest extends TestBase {
                 }).result;
                 final GoshawkObjRef[] refs = rootObj0.getReferences();
                 if (refs.length != 1 || refs[0] != obj0) {
-                    fail("Expected to find obj0 as only ref from root. Instead found " + refs);
+                    fail("Expected to find obj0 as only ref from root. Instead found " + Arrays.toString(refs));
                 }
                 final String val0 = byteBufferToString(refs[0].getValue(), "Hello".length());
                 assertEquals("Expected to find 'Hello' as value of obj0. Instead found " + val0, "Hello", val0);
