@@ -196,7 +196,6 @@ public class Connection implements AutoCloseable {
      *            times as necessary until the transaction either commits or chooses to abort.
      * @param <R> The type of the result of the transaction function.
      * @return The result of the transaction function.
-     * @throws Exception The transaction may through exceptions.
      */
     public <R> TransactionResult<R> runTransaction(final TransactionFunction<R> fun) {
         final Map<String, Cache.RefCap> r;
