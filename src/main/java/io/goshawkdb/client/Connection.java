@@ -1,10 +1,14 @@
 package io.goshawkdb.client;
 
 import org.capnproto.MessageBuilder;
+import org.capnproto.StructList;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 import io.goshawkdb.client.capnp.ConnectionCap;
 import io.goshawkdb.client.capnp.TransactionCap;
@@ -18,8 +22,11 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.timeout.IdleStateHandler;
 
 import static io.goshawkdb.client.ConnectionFactory.BUFFER_SIZE;
+import static io.goshawkdb.client.ConnectionFactory.HEARTBEAT_INTERVAL;
+import static io.goshawkdb.client.ConnectionFactory.HEARTBEAT_INTERVAL_UNIT;
 import static io.goshawkdb.client.ConnectionFactory.KEY_LEN;
 
 /**
@@ -86,7 +93,7 @@ public class Connection implements AutoCloseable {
     private ChannelFuture connectFuture;
     private State state;
     private ChannelPipeline pipeline;
-    private VarUUId root;
+    private Map<String, Cache.RefCap> roots;
     private ByteBuffer nameSpace;
     private long nextVarUUId;
     private long nextTxnId;
@@ -110,6 +117,7 @@ public class Connection implements AutoCloseable {
             @Override
             protected void initChannel(final SocketChannel ch) throws Exception {
                 final ChannelPipeline pipeline = ch.pipeline();
+                pipeline.addLast(new IdleStateHandler(2 * HEARTBEAT_INTERVAL, HEARTBEAT_INTERVAL, 0, HEARTBEAT_INTERVAL_UNIT));
                 pipeline.addLast(new CapnProtoCodec(Connection.this));
                 pipeline.addLast(new AwaitHandshake(Connection.this));
             }
@@ -124,7 +132,7 @@ public class Connection implements AutoCloseable {
         }
         future.sync();
         synchronized (lock) {
-            while (root == null && future.channel().isOpen()) {
+            while (roots == null && future.channel().isOpen()) {
                 lock.wait();
             }
         }
@@ -138,7 +146,7 @@ public class Connection implements AutoCloseable {
     public boolean isConnected() {
         synchronized (lock) {
             if (connectFuture != null) {
-                return connectFuture.channel().isActive() && root != null;
+                return connectFuture.channel().isActive() && roots != null;
             }
         }
         return false;
@@ -188,16 +196,15 @@ public class Connection implements AutoCloseable {
      *            times as necessary until the transaction either commits or chooses to abort.
      * @param <R> The type of the result of the transaction function.
      * @return The result of the transaction function.
-     * @throws Exception The transaction may through exceptions.
      */
     public <R> TransactionResult<R> runTransaction(final TransactionFunction<R> fun) {
-        final VarUUId r;
+        final Map<String, Cache.RefCap> r;
         final TransactionImpl<?> oldTxn;
         synchronized (lock) {
-            if (root == null) {
-                throw new IllegalStateException("Unable to start transaction: root object not ready");
+            if (roots == null) {
+                throw new IllegalStateException("Unable to start transaction: roots are not ready");
             }
-            r = root;
+            r = roots;
             oldTxn = txn;
         }
         final TransactionImpl<R> curTxn = new TransactionImpl<>(fun, this, this.cache, r, oldTxn);
@@ -223,18 +230,21 @@ public class Connection implements AutoCloseable {
     }
 
     void serverHello(final ConnectionCap.HelloClientFromServer.Reader hello, final ChannelHandlerContext ctx) throws InterruptedException {
-        final ByteBuffer rootId = hello.getRootId().asByteBuffer();
-        if (rootId.limit() == 0) {
+        final StructList.Reader<ConnectionCap.Root.Reader> rootsCap = hello.getRoots();
+        if (rootsCap.size() == 0) {
             lock.notifyAll();
-            throw new IllegalStateException("Cluster is not yet formed; Root object has not been created.");
-        } else if (rootId.limit() != KEY_LEN) {
-            lock.notifyAll();
-            throw new IllegalStateException("Root object VarUUId is of wrong length!");
+            throw new IllegalStateException("Cluster is not yet formed; No roots have been created.");
         } else {
+            final Map<String, Cache.RefCap> roots = new HashMap<>();
+            for (ConnectionCap.Root.Reader reader : rootsCap) {
+                final VarUUId rootId = new VarUUId(reader.getVarId().asByteBuffer());
+                roots.put(reader.getName().toString(), new Cache.RefCap(rootId, reader.getCapability()));
+            }
+            cache.setRoots(roots);
             nextState(ctx);
             synchronized (lock) {
                 pipeline = ctx.pipeline();
-                root = new VarUUId(rootId);
+                this.roots = Collections.unmodifiableMap(roots);
                 nameSpace = ByteBuffer.allocate(KEY_LEN);
                 nameSpace.position(8);
                 nameSpace.put(hello.getNamespace().asByteBuffer());
@@ -247,13 +257,13 @@ public class Connection implements AutoCloseable {
 
     void disconnected() {
         synchronized (lock) {
-            root = null;
+            roots = null;
             cache.clear();
             lock.notifyAll();
         }
     }
 
-    void nextState(final ChannelHandlerContext ctx) throws InterruptedException {
+    void nextState(final ChannelHandlerContext ctx) {
         synchronized (lock) {
             switch (state) {
                 case AwaitHandshake: {
@@ -263,7 +273,7 @@ public class Connection implements AutoCloseable {
                 }
                 case AwaitServerHello: {
                     state = State.Run;
-                    ctx.pipeline().addLast(new Heartbeater(ctx));
+                    ctx.pipeline().addLast(new HeartbeatHandler());
                     break;
                 }
             }

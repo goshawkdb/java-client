@@ -30,7 +30,7 @@ import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
-import java.util.Arrays;
+import java.util.Collections;
 
 import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManagerFactory;
@@ -181,8 +181,7 @@ public class Certs {
      * @return The Certs object for method chaining
      */
     public Certs parseClientPEM(final Reader reader) throws CertificateException, InvalidKeySpecException, InvalidKeyException, IOException {
-        final PEMParser parser = new PEMParser(reader);
-        try {
+        try (final PEMParser parser = new PEMParser(reader)) {
             Object o;
             boolean foundCert = false;
             boolean foundKeyPair = false;
@@ -196,8 +195,6 @@ public class Certs {
                     foundKeyPair = true;
                 }
             }
-        } finally {
-            parser.close();
         }
         return this;
     }
@@ -254,7 +251,7 @@ public class Certs {
         return SslContextBuilder.forClient()
                 .sslProvider(SslProvider.JDK)
                 .trustManager(getTrustManagerFactory())
-                .ciphers(Arrays.asList(CIPHER))
+                .ciphers(Collections.singletonList(CIPHER))
                 .keyManager(clientPrivateKey, clientCertificate)
                 .sessionCacheSize(0)
                 .sessionTimeout(0)

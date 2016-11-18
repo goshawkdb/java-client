@@ -1,0 +1,19 @@
+This file lists all individuals having contributed content to the
+repository.
+
+Matthew Sackman <matthew@goshawkdb.io>
+Ashley Hewson <ash@lshift.net>
+
+By default, code in this repository is:
+Copyright (C) 2016 Matthew Sackman <matthew@goshawkdb.io>
+
+The following files in this repository are:
+
+Copyright (C) 2016 Matthew Sackman <matthew@goshawkdb.io>
+Copyright (C) 2016 LShift Ltd <opensource@lshift.net>
+
+src/main/java/io/goshawkdb/client/CapnProtoCodec.java
+src/main/java/io/goshawkdb/client/Connection.java
+src/main/java/io/goshawkdb/client/ConnectionFactory.java
+src/main/java/io/goshawkdb/client/HeartbeatHandler.java
+

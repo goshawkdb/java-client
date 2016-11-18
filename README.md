@@ -48,6 +48,10 @@ connect, there are three environment variables to set:
   containing a client X.509 certificate and key pair which the client
   uses to authenticate to the server. The default is
   [src/test/resources/defaultClientKeyPair.pem](src/test/resources/defaultClientKeyPair.pem)
+* `GOSHAWKDB_ROOT_NAME` This is the name of the root object to use.
+  By default it is `test`. You must configure your GoshawkDB cluster to
+  have such a root object and it must be fully writable by the test
+  client account.
 
 If you set these in the terminal before invoking `gradlew test` then
 they will be picked up.

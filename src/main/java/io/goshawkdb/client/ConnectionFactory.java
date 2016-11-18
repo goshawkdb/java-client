@@ -4,7 +4,6 @@ import java.util.concurrent.TimeUnit;
 
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.util.HashedWheelTimer;
 
 /**
  * This class is used to construct connections to a GoshawkDB node or cluster.
@@ -13,14 +12,12 @@ public class ConnectionFactory {
 
     public static final int DEFAULT_PORT = 7894;
     static final String PRODUCT_NAME = "GoshawkDB";
-    static final String PRODUCT_VERSION = "0.2";
+    static final String PRODUCT_VERSION = "dev";
     static final int BUFFER_SIZE = 131072;
     static final int HEARTBEAT_INTERVAL = 2;
     static final TimeUnit HEARTBEAT_INTERVAL_UNIT = TimeUnit.SECONDS;
     static final int KEY_LEN = 20;
     static final TxnId VERSION_ZERO = new TxnId(new byte[KEY_LEN]);
-
-    public static final HashedWheelTimer timer = new HashedWheelTimer();
 
     public final EventLoopGroup group;
 

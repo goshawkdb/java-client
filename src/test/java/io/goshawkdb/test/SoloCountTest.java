@@ -13,7 +13,7 @@ import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
 
 import io.goshawkdb.client.Connection;
-import io.goshawkdb.client.GoshawkObj;
+import io.goshawkdb.client.GoshawkObjRef;
 
 import static org.junit.Assert.fail;
 
@@ -26,14 +26,14 @@ public class SoloCountTest extends TestBase {
     @Test
     public void soloCount() throws InterruptedException {
         try {
-            final Connection conn = createConnections(1)[0];
-            setRootToZeroInt64(conn);
+            final Connection c = createConnections(1)[0];
+            setRootToZeroInt64(c);
             final long start = System.nanoTime();
             long expected = 0L;
             for (int idx = 0; idx < 1000; idx++) {
                 final long expectedCopy = expected;
-                expected = conn.runTransaction(txn -> {
-                    final GoshawkObj root = txn.getRoot();
+                expected = runTransaction(c, txn -> {
+                    final GoshawkObjRef root = getRoot(txn);
                     final ByteBuffer valBuf = root.getValue().order(ByteOrder.BIG_ENDIAN);
                     final long old = valBuf.getLong(0);
                     if (old == expectedCopy) {
@@ -44,7 +44,7 @@ public class SoloCountTest extends TestBase {
                         fail("Expected " + expectedCopy + " but found " + old);
                         return null;
                     }
-                }).result;
+                });
             }
             final long end = System.nanoTime();
             System.out.println("Elapsed time: " + ((double) (end - start)) / 1000000D + "ms");

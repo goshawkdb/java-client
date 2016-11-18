@@ -5,7 +5,7 @@ import org.capnproto.MessageReader;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 
-class MessageReaderRefCount implements ByteBufHolder {
+final class MessageReaderRefCount implements ByteBufHolder {
 
     final ByteBuf buf;
 

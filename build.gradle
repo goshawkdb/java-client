@@ -3,7 +3,7 @@ apply plugin: 'java-library-distribution'
 apply plugin: 'jacoco'
 apply plugin: 'maven'
 
-version = '0.2.3'
+version = '0.3'
 group = 'io.goshawkdb'
 archivesBaseName = "goshawkdb-client"
 
@@ -13,8 +13,8 @@ targetCompatibility = 1.8
 javadoc {
     source = {
         fileTree(dir: 'src/main/java/io/goshawkdb/client',
-                includes: ['Certs.java', 'Connection.java', 'ConnectionFactory.java',
-                           'GoshawkObj.java', 'Transaction.java', 'TransactionFunction.java',
+                includes: ['Certs.java', 'Connection.java', 'ConnectionFactory.java', 'Capability.java',
+                           'GoshawkObjRef.java', 'Transaction.java', 'TransactionFunction.java',
                            'TransactionAbortedException.java',
                            'TransactionResult.java', 'TxnId.java', 'VarUUId.java'])
     }
@@ -115,7 +115,8 @@ test {
     environment(
             'GOSHAWKDB_DEFAULT_CLUSTER_HOSTS': 'localhost',
             'GOSHAWKDB_DEFAULT_CLUSTER_CERT': projectDir.path.concat('/src/test/resources/defaultClusterCert.pem'),
-            'GOSHAWKDB_DEFAULT_CLIENT_KEYPAIR': projectDir.path.concat('/src/test/resources/defaultClientKeyPair.pem')
+            'GOSHAWKDB_DEFAULT_CLIENT_KEYPAIR': projectDir.path.concat('/src/test/resources/defaultClientKeyPair.pem'),
+            'GOSHAWKDB_DEFAULT_ROOT_NAME': 'test'
     )
 }
 
@@ -125,8 +126,21 @@ repositories {
 
 dependencies {
     compile group: 'org.capnproto', name: 'runtime', version: '0.1.1'
-    compile group: 'io.netty', name: 'netty-all', version: '4.1.0.Final'
-    compile group: 'org.bouncycastle', name: 'bcpkix-jdk15on', version: '1.54'
+    compile group: 'io.netty', name: 'netty-all', version: '4.1.6.Final'
+    compile group: 'org.bouncycastle', name: 'bcpkix-jdk15on', version: '1.55'
     compile group: 'commons-codec', name: 'commons-codec', version: '1.10'
-    testCompile group: 'junit', name: 'junit', version: '4.11'
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+}
+
+configurations {
+    testFixtures
+}
+
+task testFixturesJar(type: Jar) {
+    classifier = 'tests'
+    from sourceSets.test.output
+}
+
+artifacts {
+    testFixtures testFixturesJar
 }

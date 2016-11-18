@@ -4,7 +4,7 @@ import java.nio.ByteBuffer;
 
 import static io.goshawkdb.client.GoshawkObj.cloneByteBuffer;
 
-class ObjectState {
+final class ObjectState {
 
     final GoshawkObj obj;
 
@@ -13,22 +13,22 @@ class ObjectState {
     TxnId curVersion = null;
     ByteBuffer curValue = null;
     MessageReaderRefCount curValueRef = null;
-    GoshawkObj[] curObjectRefs = null;
+    GoshawkObjRef[] curObjectRefs = null;
 
     final boolean create;
     boolean read = false;
     boolean write = false;
 
     // from creation, so does cloning of val and refs
-    ObjectState(final GoshawkObj gObj, final TransactionImpl<?> txn, final ByteBuffer val, final GoshawkObj[] refs) {
+    ObjectState(final GoshawkObj gObj, final TransactionImpl<?> txn, final ByteBuffer val, final GoshawkObjRef[] refs) {
         obj = gObj;
         create = true;
         transaction = txn;
         curValue = cloneByteBuffer(val).asReadOnlyBuffer();
         if (refs == null) {
-            curObjectRefs = new GoshawkObj[0];
+            curObjectRefs = new GoshawkObjRef[0];
         } else {
-            curObjectRefs = new GoshawkObj[refs.length];
+            curObjectRefs = new GoshawkObjRef[refs.length];
             System.arraycopy(refs, 0, curObjectRefs, 0, refs.length);
         }
     }
