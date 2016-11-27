@@ -4,11 +4,13 @@ import java.util.concurrent.TimeUnit;
 
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.util.concurrent.Future;
 
 /**
- * This class is used to construct connections to a GoshawkDB node or cluster.
+ * This class is used to construct connections to a GoshawkDB node or cluster. The AutoCloseable
+ * will close the group regardless of whether or not you passed it to the constructor.
  */
-public class ConnectionFactory {
+public class ConnectionFactory implements AutoCloseable {
 
     public static final int DEFAULT_PORT = 7894;
     static final String PRODUCT_NAME = "GoshawkDB";
@@ -70,5 +72,15 @@ public class ConnectionFactory {
         final Connection conn = new Connection(this, certs, host, port);
         conn.connect();
         return conn;
+    }
+
+    @Override
+    public void close() throws InterruptedException {
+        if (group != null) {
+            final Future<?> closeFuture = group.shutdownGracefully();
+            if (closeFuture != null) {
+                closeFuture.sync();
+            }
+        }
     }
 }
