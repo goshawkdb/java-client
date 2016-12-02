@@ -115,6 +115,7 @@ public class NestedTest extends TestBase {
                         rootObj1.set(ByteBuffer.wrap("inner".getBytes()));
                         throw TransactionAbortedException.e;
                     }).isAborted();
+                    assertTrue("Expected aborted to be true", aborted);
                     final String found3 = byteBufferToString(rootObj1.getValue(), "mid".length());
                     assertEquals("Expected to find 'mid' but found " + found3, "mid", found3);
                     return null;
@@ -179,7 +180,7 @@ public class NestedTest extends TestBase {
                     final GoshawkObjRef obj1 = t1.createObject(ByteBuffer.wrap("Hello".getBytes()));
                     getRoot(t1).set(null, obj1);
                     return obj1;
-                }).result;
+                }).getResultOrAbort();
                 final GoshawkObjRef[] refs = rootObj0.getReferences();
                 if (refs.length != 1 || refs[0] != obj0) {
                     fail("Expected to find obj0 as only ref from root. Instead found " + Arrays.toString(refs));

@@ -166,7 +166,7 @@ public class TestBase {
             }
         }
         connections.clear();
-        factory.group.shutdownGracefully();
+        factory.close();
     }
 
     protected static String byteBufferToString(final ByteBuffer buf, final int len) {
