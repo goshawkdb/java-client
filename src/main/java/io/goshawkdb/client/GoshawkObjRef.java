@@ -136,4 +136,24 @@ public class GoshawkObjRef {
     public void set(final ByteBuffer value, final GoshawkObjRef... references) {
         obj.set(value, references);
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null) {
+            return false;
+        } else if (obj == null) {
+            return o instanceof GoshawkObjRef && ((GoshawkObjRef) o).obj == null;
+        } else {
+            return o instanceof GoshawkObjRef && referencesSameAs((GoshawkObjRef) o);
+        }
+    }
+
+    @Override
+    public int hashCode() {
+        if (obj == null) {
+            return 0;
+        } else {
+            return obj.id.hashCode();
+        }
+    }
 }
