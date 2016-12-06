@@ -165,7 +165,7 @@ public class TransactionResult<R> {
      * @param <S> The type parameter of the TransactionResult result of the continuation.
      * @return The result of the continuation, unless an exception is thrown.
      */
-    public <S> TransactionResult<S> bindOrAbort(final Function<R, TransactionResult<S>> then) {
+    public <S> TransactionResult<S> whenSuccessfulElseAbort(final Function<? super R, TransactionResult<S>> then) {
         if (cause == null) {
             return then.apply(result);
         } else {
