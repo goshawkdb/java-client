@@ -1,6 +1,7 @@
 package io.goshawkdb.client;
 
 import java.util.function.BiFunction;
+import java.util.function.Function;
 
 /**
  * Encloses the result of the transaction (assuming it committed) with the {@link TxnId} of the
@@ -114,6 +115,62 @@ public class TransactionResult<R> {
             return extend(after.apply(result, cause), cause);
         } catch (final Exception e) {
             return extend(null, e);
+        }
+    }
+
+    /**
+     * If there is no exception in this result then this is returned. Otherwise, if the mapException function is non-null then
+     * it is applied to the cause in this result. The mapped exception (or the original exception if mapException is null), if
+     * non-null, is rethrown. Thus, you can use this outside of transactions to tidy up state in the event of an error, and you
+     * can use it to absorb an exception if necessary.
+     *
+     * @param mapException If non-null, and this contains a non-null cause, then mapException is invoked with the cause.
+     * @return A TransactionResult carrying the same result as this but possibly a different exception.
+     */
+    public TransactionResult<R> rethrowIfException(final Function<Exception, Exception> mapException) throws Exception {
+        if (cause == null) {
+            return this;
+        } else {
+            final TransactionResult<R> that = mapException == null ? this : extend(result, mapException.apply(cause));
+            that.getResultOrRethrow();
+            return that;
+        }
+    }
+
+    /**
+     * If there is no exception in this result then this is returned. Otherwise, if the mapException function is non-null then
+     * it is applied to the cause in this result. The mapped exception (or the original exception if mapException is null), if
+     * non-null, is wrapped in TransactionAbortedException and thrown. Thus, you can use this inside transactions to tidy up
+     * state in the event of an error from a nested-transaction, and you can use it to absorb an exception if necessary.
+     *
+     * @param mapException If non-null, and this contains a non-null cause, then mapException is invoked with the cause.
+     * @return A TransactionResult carrying the same result as this but possibly a different exception.
+     */
+    public TransactionResult<R> abortIfException(final Function<Exception, Exception> mapException) {
+        if (cause == null) {
+            return this;
+        } else {
+            final TransactionResult<R> that = mapException == null ? this : extend(result, mapException.apply(cause));
+            that.getResultOrAbort();
+            return that;
+        }
+    }
+
+    /**
+     * This method is intended for use within a transaction where you are calling a number of nested transactions and need to chain them together.
+     * If this has a non-null cause, then it is wrapped in a TransactionAbortedException and thrown, thus aborting the parent transaction.
+     * Otherwise, the result of this is passed to then. Then can run further transactions if it should wish.
+     *
+     * @param then The continuation to invoke if there is no exception in this.
+     * @param <S> The type parameter of the TransactionResult result of the continuation.
+     * @return The result of the continuation, unless an exception is thrown.
+     */
+    public <S> TransactionResult<S> abortOrBind(final Function<R, TransactionResult<S>> then) {
+        if (cause == null) {
+            return then.apply(result);
+        } else {
+            getResultOrAbort();
+            return null;
         }
     }
 }
