@@ -31,15 +31,12 @@ public class VarUUId {
 
     @Override
     public boolean equals(Object obj) {
-        if (obj != null && obj instanceof VarUUId) {
-            return Arrays.equals(id, ((VarUUId) obj).id);
-        }
-        return false;
+        return this == obj || (obj != null && obj instanceof VarUUId && Arrays.equals(id, ((VarUUId) obj).id));
     }
 
     /**
-     * Returns the object identifier as a byte array. This can be useful for example when using the
-     * collections library and you wish to use GoshawkDB Objects as keys in a collection.
+     * Returns the object identifier as a byte array. This can be useful for example when using the collections library and you
+     * wish to use GoshawkDB Objects as keys in a collection.
      *
      * @return The object identifier as a byte array.
      */

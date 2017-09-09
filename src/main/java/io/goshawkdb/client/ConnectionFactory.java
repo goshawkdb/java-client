@@ -7,8 +7,8 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.util.concurrent.Future;
 
 /**
- * This class is used to construct connections to a GoshawkDB node or cluster. The AutoCloseable
- * will close the group regardless of whether or not you passed it to the constructor.
+ * This class is used to construct connections to a GoshawkDB node or cluster. The AutoCloseable will close the group
+ * regardless of whether or not you passed it to the constructor.
  */
 public class ConnectionFactory implements AutoCloseable {
 
@@ -43,8 +43,7 @@ public class ConnectionFactory implements AutoCloseable {
      * Create and start a connection to a GoshawkDB node using the default port (7894)
      *
      * @param certs The certificates to use for mutual authentication
-     * @param host  The host to connect to (host name or IP address). This can be in host:port
-     *              format
+     * @param host  The host to connect to (host name or IP address). This can be in host:port format
      * @return a new connection
      * @throws InterruptedException if an interruption occurs during connection
      */

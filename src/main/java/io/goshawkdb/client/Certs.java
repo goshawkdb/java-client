@@ -41,8 +41,8 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
 /**
- * Class for managing the cluster ECDSA certificate and public key, and the client ECDSA certificate
- * and key pair. GoshawkDB only speaks TLSv1.2 on TCP, and only uses ECDSA keys on P256.
+ * Class for managing the cluster ECDSA certificate and public key, and the client ECDSA certificate and key pair. GoshawkDB
+ * only speaks TLSv1.2 on TCP, and only uses ECDSA keys on P256.
  */
 public class Certs {
 
@@ -84,12 +84,11 @@ public class Certs {
     }
 
     /**
-     * Provided in case you wish to provide your own keystore (for example one that is stored on
-     * disk rather than an ephemeral one). The keystore is only used to hold the cluster
-     * certificate, and thus validate the certificate presented by the GoshawkDB node to which you
-     * connect (as opposed to the client certificate and key pair. I.e. even if you set a key store,
-     * you still need to call setClientCertificateHolder and setClientKeyPair, or parseClientPEM).
-     * If you supply your own KeyStore, you must have initialized it yourself.
+     * Provided in case you wish to provide your own keystore (for example one that is stored on disk rather than an ephemeral
+     * one). The keystore is only used to hold the cluster certificate, and thus validate the certificate presented by the
+     * GoshawkDB node to which you connect (as opposed to the client certificate and key pair. I.e. even if you set a key
+     * store, you still need to call setClientCertificateHolder and setClientKeyPair, or parseClientPEM). If you supply your
+     * own KeyStore, you must have initialized it yourself.
      *
      * @param ks The KeyStore to use.
      * @return A new Certs
@@ -110,9 +109,8 @@ public class Certs {
     }
 
     /**
-     * Loads a single X.509 certificate from the provided InputStream into the current KeyStore. If
-     * no KeyStore has been set, certificates will be loaded into a fresh ephemeral KeyStore. Will
-     * always close the InputStream.
+     * Loads a single X.509 certificate from the provided InputStream into the current KeyStore. If no KeyStore has been set,
+     * certificates will be loaded into a fresh ephemeral KeyStore. Will always close the InputStream.
      *
      * @param alias The name under which to store the certificate (just pick something sane)
      * @param is    The InputStream to read the certificate from.
@@ -142,10 +140,9 @@ public class Certs {
     }
 
     /**
-     * Set the ClientCertificateHolder. This is the X.509 certificate and public key the client will
-     * present to the GoshawkDB node for authentication. The public key must be an ECDSA P256 key.
-     * Once the ClientCertificateHolder and the ClientKeyPair are both set, it is verified that they
-     * both contain the same public key.
+     * Set the ClientCertificateHolder. This is the X.509 certificate and public key the client will present to the GoshawkDB
+     * node for authentication. The public key must be an ECDSA P256 key. Once the ClientCertificateHolder and the
+     * ClientKeyPair are both set, it is verified that they both contain the same public key.
      *
      * @param certHolder The holder for the client certificate and public key
      * @return The Certs object for method chaining
@@ -158,9 +155,8 @@ public class Certs {
     }
 
     /**
-     * Set the ClientKeyPair. This must be an ECDSA P256 key pair in PEM format. Once the
-     * ClientCertificateHolder and the ClientKeyPair are both set, it is verified that they both
-     * contain the same public key.
+     * Set the ClientKeyPair. This must be an ECDSA P256 key pair in PEM format. Once the ClientCertificateHolder and the
+     * ClientKeyPair are both set, it is verified that they both contain the same public key.
      *
      * @param keyPair The client public and private key pair
      * @return The Certs object for method chaining
@@ -173,10 +169,9 @@ public class Certs {
     }
 
     /**
-     * Parse the contents of the provided Reader for an X.509 Certificate with public key, and a PEM
-     * Key Pair, and calls setClientCertificateHolder and setClientKeyPair as appropriate. Only the
-     * first X.509 Certificate and the first PEM Key Pair are read, but order within the Reader does
-     * not matter. The Reader is always closed.
+     * Parse the contents of the provided Reader for an X.509 Certificate with public key, and a PEM Key Pair, and calls
+     * setClientCertificateHolder and setClientKeyPair as appropriate. Only the first X.509 Certificate and the first PEM Key
+     * Pair are read, but order within the Reader does not matter. The Reader is always closed.
      *
      * @param reader The reader to read from
      * @return The Certs object for method chaining

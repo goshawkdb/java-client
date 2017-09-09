@@ -10,7 +10,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import io.goshawkdb.client.capnp.CapabilitiesCap;
 import io.goshawkdb.client.capnp.TransactionCap;
 
 final class Cache {
@@ -20,16 +19,6 @@ final class Cache {
         RefCap[] references;
         MessageReaderRefCount reader;
         Capability cap;
-    }
-
-    static class RefCap {
-        final VarUUId vUUId;
-        final Capability cap;
-
-        RefCap(final VarUUId varUUId, final CapabilitiesCap.Capability.Reader capReader) {
-            vUUId = varUUId;
-            cap = Capability.fromCapnp(capReader);
-        }
     }
 
     private final Object lock = new Object();
@@ -50,7 +39,7 @@ final class Cache {
     void setRoots(final Map<String, RefCap> roots) {
         roots.forEach((name, rc) -> {
             final ValueRef vr = new ValueRef();
-            vr.cap = rc.cap;
+            vr.cap = rc.capability;
             m.put(rc.vUUId, vr);
         });
     }
@@ -130,6 +119,7 @@ final class Cache {
         } else if (vr.version.equals(txnId)) {
             throw new IllegalStateException("Divergence discovered on deletion of " + vUUId + ": server thinks we don't have " + txnId + " but we do!");
         } else {
+            // nb we do not wipe out the capabilities nor the vr itself!
             vr.version = null;
             vr.value = null;
             vr.references = null;
@@ -142,7 +132,7 @@ final class Cache {
 
     private boolean updateFromWrite(final TxnId txnId, final VarUUId vUUId, final Data.Reader value, final StructList.Reader<TransactionCap.ClientVarIdPos.Reader> refs, final MessageReaderRefCount reader, final boolean created) {
         ValueRef vr = m.get(vUUId);
-        final boolean updated = vr != null && vr.version != null;
+        final boolean updated = vr != null && vr.references != null;
         final RefCap[] references = new RefCap[refs.size()];
         if (vr == null) {
             vr = new ValueRef();
@@ -175,12 +165,12 @@ final class Cache {
             vr = m.get(rc.vUUId);
             if (vr == null) {
                 vr = new ValueRef();
-                vr.cap = rc.cap;
+                vr.cap = rc.capability;
                 m.put(rc.vUUId, vr);
             } else if (vr.cap == null) {
-                vr.cap = rc.cap;
+                vr.cap = rc.capability;
             } else {
-                vr.cap = vr.cap.union(rc.cap);
+                vr.cap = vr.cap.union(rc.capability);
             }
         }
         return updated;

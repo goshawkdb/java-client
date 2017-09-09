@@ -13,7 +13,8 @@ import java.security.spec.InvalidKeySpecException;
 
 import io.goshawkdb.client.Capability;
 import io.goshawkdb.client.Connection;
-import io.goshawkdb.client.GoshawkObjRef;
+import io.goshawkdb.client.RefCap;
+import io.goshawkdb.client.ValueRefs;
 
 import static junit.framework.TestCase.assertEquals;
 import static org.junit.Assert.fail;
@@ -24,70 +25,80 @@ public class CapabilitiesTest extends TestBase {
     }
 
     private void createObjOffRoot(final Connection c, final Capability cap, final ByteBuffer value) {
-        runTransaction(c, txn -> {
-            final GoshawkObjRef root = getRoot(txn);
-            final GoshawkObjRef obj = txn.createObject(value);
-            root.set(null, obj.grantCapability(cap));
+        c.transact(txn -> {
+            final RefCap root = txn.root(rootName);
+            final RefCap obj = txn.create(value);
+            txn.write(root, null, obj.grantCapability(cap));
             return null;
-        });
+        }).getResultOrRethrow();
     }
 
     private void attemptRead(final Connection c, final int refsLen, final int refsIdx, final Capability refCap, final Capability objCap, final ByteBuffer value) {
-        final ByteBuffer read = runTransaction(c, txn -> {
-            final GoshawkObjRef root = getRoot(txn);
-            final GoshawkObjRef[] refs = root.getReferences();
-            if (refs.length != refsLen) {
-                throw new IllegalStateException("Expected root to have " + refsLen + " reference(s); got " + refs.length);
+        final ByteBuffer read = c.transact(txn -> {
+            final RefCap root = txn.root(rootName);
+            final ValueRefs vr = txn.read(root);
+            if (txn.restartNeeded()) {
+                return null;
             }
-            final GoshawkObjRef obj = refs[refsIdx];
-            if (refCap != obj.getRefCapability()) {
-                throw new IllegalStateException("Expected " + refCap + " reference capability; got " + obj.getRefCapability());
+            if (vr.references.length != refsLen) {
+                throw new IllegalStateException("Expected root to have " + refsLen + " reference(s); got " + vr.references.length);
             }
-            if (objCap != obj.getObjCapability()) {
-                throw new IllegalStateException("Expected " + objCap + " object capability; got " + obj.getObjCapability());
+            final RefCap obj = vr.references[refsIdx];
+            if (refCap != obj.capability) {
+                throw new IllegalStateException("Expected " + refCap + " reference capability; got " + obj.capability);
+            }
+            if (objCap != txn.objectCapability(obj)) {
+                throw new IllegalStateException("Expected " + objCap + " object capability; got " + txn.objectCapability(obj));
             }
             if (objCap.canRead()) {
-                return obj.getValue();
+                final ValueRefs vr1 = txn.read(obj);
+                if (txn.restartNeeded()) {
+                    return null;
+                }
+                return vr1.value;
             } else {
                 try {
-                    obj.getValue();
+                    txn.read(obj);
                 } catch (IllegalArgumentException e) {
                     return null;
                 }
                 throw new IllegalStateException("Expected to error on illegal read attempt");
             }
-        });
+        }).getResultOrRethrow();
         if (objCap.canRead()) {
             assertEquals("Read the wrong value.", value, read);
         }
     }
 
     private void attemptWrite(final Connection c, final int refsLen, final int refsIdx, final Capability refCap, final Capability objCap, final ByteBuffer value) {
-        runTransaction(c, txn -> {
-            final GoshawkObjRef root = getRoot(txn);
-            final GoshawkObjRef[] refs = root.getReferences();
-            if (refs.length != refsLen) {
-                throw new IllegalStateException("Expected root to have " + refsLen + " reference(s); got " + refs.length);
+        c.transact(txn -> {
+            final RefCap root = txn.root(rootName);
+            final ValueRefs vr = txn.read(root);
+            if (txn.restartNeeded()) {
+                return null;
             }
-            final GoshawkObjRef obj = refs[refsIdx];
-            if (refCap != obj.getRefCapability()) {
-                throw new IllegalStateException("Expected " + refCap + " reference capability; got " + obj.getRefCapability());
+            if (vr.references.length != refsLen) {
+                throw new IllegalStateException("Expected root to have " + refsLen + " reference(s); got " + vr.references.length);
             }
-            if (objCap != obj.getObjCapability()) {
-                throw new IllegalStateException("Expected " + objCap + " object capability; got " + obj.getObjCapability());
+            final RefCap obj = vr.references[refsIdx];
+            if (refCap != obj.capability) {
+                throw new IllegalStateException("Expected " + refCap + " reference capability; got " + obj.capability);
+            }
+            if (objCap != txn.objectCapability(obj)) {
+                throw new IllegalStateException("Expected " + objCap + " object capability; got " + txn.objectCapability(obj));
             }
             if (objCap.canWrite()) {
-                obj.set(value);
+                txn.write(obj, value);
                 return null;
             } else {
                 try {
-                    obj.set(value);
+                    txn.write(obj, value);
                 } catch (IllegalArgumentException e) {
                     return null;
                 }
                 throw new IllegalStateException("Expected to error on illegal write attempt");
             }
-        });
+        }).getResultOrRethrow();
     }
 
     @Test
@@ -179,17 +190,20 @@ public class CapabilitiesTest extends TestBase {
             // locally and write it back into the root. Of course, the server
             // should reject the txn:
             try {
-                runTransaction(c2, txn -> {
-                    final GoshawkObjRef root = getRoot(txn);
-                    final GoshawkObjRef[] refs = root.getReferences();
-                    if (refs.length != 1) {
-                        throw new IllegalStateException("Expected root to have 1 reference; got " + refs.length);
+                c2.transact(txn -> {
+                    final RefCap root = txn.root(rootName);
+                    ValueRefs vr = txn.read(root);
+                    if (txn.restartNeeded()) {
+                        return null;
+                    }
+                    if (vr.references.length != 1) {
+                        throw new IllegalStateException("Expected root to have 1 reference; got " + vr.references.length);
                     }
                     // we will only have write on this ref (and on the obj)
-                    final GoshawkObjRef obj = refs[0];
-                    root.set(null, obj.grantCapability(Capability.Read));
+                    final RefCap obj = vr.references[0];
+                    txn.write(root, null, obj.grantCapability(Capability.Read));
                     return null;
-                });
+                }).getResultOrRethrow();
             } catch (final RuntimeException e) {
                 return;
             }
@@ -215,17 +229,20 @@ public class CapabilitiesTest extends TestBase {
             // locally and write it back into the root. Of course, the server
             // should reject the txn:
             try {
-                runTransaction(c2, txn -> {
-                    final GoshawkObjRef root = getRoot(txn);
-                    final GoshawkObjRef[] refs = root.getReferences();
-                    if (refs.length != 1) {
-                        throw new IllegalStateException("Expected root to have 1 reference; got " + refs.length);
+                c2.transact(txn -> {
+                    final RefCap root = txn.root(rootName);
+                    ValueRefs vr = txn.read(root);
+                    if (txn.restartNeeded()) {
+                        return null;
+                    }
+                    if (vr.references.length != 1) {
+                        throw new IllegalStateException("Expected root to have 1 reference; got " + vr.references.length);
                     }
                     // we will only have read on this ref (and on the obj)
-                    final GoshawkObjRef obj = refs[0];
-                    root.set(null, obj.grantCapability(Capability.Write));
+                    final RefCap obj = vr.references[0];
+                    txn.write(root, null, obj.grantCapability(Capability.Write));
                     return null;
-                });
+                }).getResultOrRethrow();
             } catch (final RuntimeException e) {
                 return;
             }
@@ -252,14 +269,23 @@ public class CapabilitiesTest extends TestBase {
             // txn, c2 will get told about the whole txn in one go, and so
             // should immediately learn that obj1 is read-write.
 
-            runTransaction(c1, txn -> {
-                final GoshawkObjRef root = getRoot(txn);
-                final GoshawkObjRef obj1 = txn.createObject(ByteBuffer.wrap("Hello World".getBytes()));
-                final GoshawkObjRef obj2 = txn.createObject(null, obj1.grantCapability(Capability.Write));
-                final GoshawkObjRef obj3 = txn.createObject(null, obj2, obj1.grantCapability(Capability.Read));
-                root.set(null, obj3, obj1.grantCapability(Capability.None));
+            c1.transact(txn -> {
+                final RefCap root = txn.root(rootName);
+                final RefCap obj1 = txn.create(ByteBuffer.wrap("Hello World".getBytes()));
+                if (txn.restartNeeded()) {
+                    return null;
+                }
+                final RefCap obj2 = txn.create(null, obj1.grantCapability(Capability.Write));
+                if (txn.restartNeeded()) {
+                    return null;
+                }
+                final RefCap obj3 = txn.create(null, obj2, obj1.grantCapability(Capability.Read));
+                if (txn.restartNeeded()) {
+                    return null;
+                }
+                txn.write(root, null, obj3, obj1.grantCapability(Capability.None));
                 return null;
-            });
+            }).getResultOrRethrow();
             attemptRead(c2, 2, 1, Capability.None, Capability.ReadWrite, ByteBuffer.wrap("Hello World".getBytes()));
             attemptWrite(c2, 2, 1, Capability.None, Capability.ReadWrite, ByteBuffer.wrap("Goodbye World".getBytes()));
             attemptRead(c1, 2, 1, Capability.None, Capability.ReadWrite, ByteBuffer.wrap("Goodbye World".getBytes()));
@@ -288,35 +314,56 @@ public class CapabilitiesTest extends TestBase {
             // should have read-write access to obj1.
 
             // txn1: create all the objs, but only have root point to obj1.
-            runTransaction(c1, txn -> {
-                final GoshawkObjRef root = getRoot(txn);
-                final GoshawkObjRef obj1 = txn.createObject(ByteBuffer.wrap("Hello World".getBytes()));
-                final GoshawkObjRef obj2 = txn.createObject(null);
-                final GoshawkObjRef obj3 = txn.createObject(null, obj2);
-                root.set(null, obj3, obj1.grantCapability(Capability.None));
+            c1.transact(txn -> {
+                final RefCap root = txn.root(rootName);
+                final RefCap obj1 = txn.create(ByteBuffer.wrap("Hello World".getBytes()));
+                if (txn.restartNeeded()) {
+                    return null;
+                }
+                final RefCap obj2 = txn.create(null);
+                if (txn.restartNeeded()) {
+                    return null;
+                }
+                final RefCap obj3 = txn.create(null, obj2);
+                if (txn.restartNeeded()) {
+                    return null;
+                }
+                txn.write(root, null, obj3, obj1.grantCapability(Capability.None));
                 return null;
-            });
+            }).getResultOrRethrow();
             // txn2: add the read pointer from obj3 to obj1
-            runTransaction(c1, txn -> {
-                final GoshawkObjRef root = getRoot(txn);
-                final GoshawkObjRef[] rootRefs = root.getReferences();
-                final GoshawkObjRef obj3 = rootRefs[0];
-                final GoshawkObjRef obj1 = rootRefs[1];
-                final GoshawkObjRef[] obj3Refs = obj3.getReferences();
-                obj3.set(null, obj3Refs[0], obj1.grantCapability(Capability.Read));
+            c1.transact(txn -> {
+                final RefCap root = txn.root(rootName);
+                final ValueRefs rootVR = txn.read(root);
+                if (txn.restartNeeded()) {
+                    return null;
+                }
+                final RefCap obj3 = rootVR.references[0];
+                final RefCap obj1 = rootVR.references[1];
+                final ValueRefs obj3VR = txn.read(obj3);
+                if (txn.restartNeeded()) {
+                    return null;
+                }
+                txn.write(obj3, null, obj3VR.references[0], obj1.grantCapability(Capability.Read));
                 return null;
-            });
+            }).getResultOrRethrow();
             // txn3: add the write pointer from obj2 to obj1
-            runTransaction(c1, txn -> {
-                final GoshawkObjRef root = getRoot(txn);
-                final GoshawkObjRef[] rootRefs = root.getReferences();
-                final GoshawkObjRef obj3 = rootRefs[0];
-                final GoshawkObjRef obj1 = rootRefs[1];
-                final GoshawkObjRef[] obj3Refs = obj3.getReferences();
-                final GoshawkObjRef obj2 = obj3Refs[0];
-                obj2.set(null, obj1.grantCapability(Capability.Write));
+            c1.transact(txn -> {
+                final RefCap root = txn.root(rootName);
+                final ValueRefs rootVR = txn.read(root);
+                if (txn.restartNeeded()) {
+                    return null;
+                }
+                final RefCap obj3 = rootVR.references[0];
+                final RefCap obj1 = rootVR.references[1];
+                final ValueRefs obj3VR = txn.read(obj3);
+                if (txn.restartNeeded()) {
+                    return null;
+                }
+                final RefCap obj2 = obj3VR.references[0];
+                txn.write(obj2, null, obj1.grantCapability(Capability.Write));
                 return null;
-            });
+            }).getResultOrRethrow();
             // initially, c2 should not be able to read obj1
             attemptRead(c2, 2, 1, Capability.None, Capability.None, null);
             // but, if c2 first reads obj3, it should find it can read obj1
@@ -324,14 +371,24 @@ public class CapabilitiesTest extends TestBase {
             attemptRead(c2, 2, 1, Capability.None, Capability.Read, ByteBuffer.wrap("Hello World".getBytes()));
 
             // finally, if c2 reads to obj2 then we should discover we can actually write obj1
-            runTransaction(c2, txn -> {
-                final GoshawkObjRef root = getRoot(txn);
-                final GoshawkObjRef[] rootRefs = root.getReferences();
-                final GoshawkObjRef obj3 = rootRefs[0];
-                final GoshawkObjRef[] obj3Refs = obj3.getReferences();
-                final GoshawkObjRef obj2 = obj3Refs[0];
-                return obj2.getValue();
-            });
+            c2.transact(txn -> {
+                final RefCap root = txn.root(rootName);
+                final ValueRefs rootVR = txn.read(root);
+                if (txn.restartNeeded()) {
+                    return null;
+                }
+                final RefCap obj3 = rootVR.references[0];
+                final ValueRefs obj3VR = txn.read(obj3);
+                if (txn.restartNeeded()) {
+                    return null;
+                }
+                final RefCap obj2 = obj3VR.references[0];
+                final ValueRefs obj2VR = txn.read(obj2);
+                if (txn.restartNeeded()) {
+                    return null;
+                }
+                return obj2VR.value;
+            }).getResultOrRethrow();
             attemptWrite(c2, 2, 1, Capability.None, Capability.ReadWrite, ByteBuffer.wrap("Goodbye World".getBytes()));
             attemptRead(c1, 2, 1, Capability.None, Capability.ReadWrite, ByteBuffer.wrap("Goodbye World".getBytes()));
         } finally {

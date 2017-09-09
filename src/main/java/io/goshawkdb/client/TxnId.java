@@ -7,13 +7,7 @@ import java.util.Arrays;
 
 import static io.goshawkdb.client.ConnectionFactory.KEY_LEN;
 
-/**
- * Representation of GoshawkDB Transaction Ids. Objects within GoshawkDB's object graph are
- * versioned with the transaction Id that last wrote to the object. Note that ordering transaction
- * Ids is nonsensical: it does not reveal any information about the order in which transactions
- * committed.
- */
-public class TxnId {
+final class TxnId {
 
     final byte[] id;
 

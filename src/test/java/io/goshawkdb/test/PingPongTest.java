@@ -11,13 +11,10 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
-import java.util.Queue;
 
 import io.goshawkdb.client.Connection;
-import io.goshawkdb.client.GoshawkObjRef;
-import io.goshawkdb.client.TxnId;
-
-import static org.junit.Assert.fail;
+import io.goshawkdb.client.RefCap;
+import io.goshawkdb.client.ValueRefs;
 
 public class PingPongTest extends TestBase {
 
@@ -29,27 +26,31 @@ public class PingPongTest extends TestBase {
         try {
             final int limit = 1000;
             final int threadCount = 4;
-            final TxnId origRootVsn = setRootToZeroInt64(createConnections(1)[0]);
+            final ByteBuffer rootGuid = setRootToNZeroObjs(createConnections(1)[0], 1);
 
-            inParallel(threadCount, (final int tId, final Connection c, final Queue<Exception> exceptionQ) -> {
-                awaitRootVersionChange(c, origRootVsn);
+            inParallel(threadCount, (final int tId, final Connection c) -> {
+                final RefCap[] rootRefs = awaitRootVersionChange(c, rootGuid, 1);
+                RefCap objRef = rootRefs[0];
                 boolean inProgress = true;
                 while (inProgress) {
-                    inProgress = runTransaction(c, txn -> {
-                        final GoshawkObjRef root = getRoot(txn);
-                        final ByteBuffer valBuf = root.getValue().order(ByteOrder.BIG_ENDIAN);
+                    inProgress = c.transact(txn -> {
+                        final ValueRefs vr = txn.read(objRef);
+                        if (txn.restartNeeded()) {
+                            return null;
+                        }
+                        final ByteBuffer valBuf = vr.value.order(ByteOrder.BIG_ENDIAN);
                         final long val = valBuf.getLong(0);
                         if (val > limit) {
                             return false;
                         } else if (val % threadCount == tId) {
                             System.out.println("" + tId + " incrementing at " + val);
-                            root.set(valBuf.putLong(0, val + 1));
+                            txn.write(objRef, valBuf.putLong(0, val + 1));
                         } else {
                             txn.retry();
-                            fail("Reached unreachable code!");
+                            return null;
                         }
                         return true;
-                    });
+                    }).getResultOrRethrow();
                 }
             });
         } finally {
