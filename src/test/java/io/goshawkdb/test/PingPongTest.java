@@ -22,7 +22,7 @@ public class PingPongTest extends TestBase {
     }
 
     @Test
-    public void pingPong() throws Exception {
+    public void pingPong() throws InterruptedException {
         try {
             final int limit = 1000;
             final int threadCount = 4;

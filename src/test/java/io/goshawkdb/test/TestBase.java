@@ -27,7 +27,7 @@ import static junit.framework.TestCase.assertNotNull;
 public class TestBase {
 
     public interface ParRunner {
-        void run(final int parIndex, final Connection conn) throws Exception;
+        void run(final int parIndex, final Connection conn) throws RuntimeException;
     }
 
     private final ConnectionFactory factory;
@@ -87,8 +87,6 @@ public class TestBase {
                     runner.run(idxCopy, conn);
                 } catch (final RuntimeException e) {
                     exceptionQueue.add(e);
-                } catch (final Exception e) {
-                    exceptionQueue.add(new RuntimeException(e));
                 }
             });
         }

@@ -25,7 +25,7 @@ public class ParCountTest extends TestBase {
     }
 
     @Test
-    public void parCount() throws Exception {
+    public void parCount() throws InterruptedException {
         try {
             final int threadCount = 8;
             final ByteBuffer rootGuid = setRootToNZeroObjs(createConnections(1)[0], threadCount);

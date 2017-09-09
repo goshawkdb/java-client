@@ -13,10 +13,10 @@ targetCompatibility = 1.8
 javadoc {
     source = {
         fileTree(dir: 'src/main/java/io/goshawkdb/client',
-                includes: ['Certs.java', 'Connection.java', 'ConnectionFactory.java', 'Capability.java',
-                           'GoshawkObjRef.java', 'Transaction.java', 'TransactionFunction.java',
-                           'TransactionAbortedException.java',
-                           'TransactionResult.java', 'TxnId.java', 'VarUUId.java'])
+                includes: ['Capability.java', 'Certs.java', 'Connection.java', 'ConnectionFactory.java',
+                           'RefCap.java', 'Transaction.java', 'TransactionFunction.java',
+                           'TransactionAbortedException.java', 'TransactionRestartNeededException.java',
+                           'TransactionResult.java', 'Transactor.java', 'ValueRefs.java', 'VarUUId.java'])
     }
 }
 

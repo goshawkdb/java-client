@@ -244,8 +244,6 @@ final class TransactionImpl<R> implements Transaction {
                 value = fun.apply(this);
             } catch (final RuntimeException exception) {
                 e = exception;
-            } catch (final Exception exception) {
-                e = new RuntimeException(exception);
             } finally {
                 synchronized (lock) {
                     if (e != null || aborted) {

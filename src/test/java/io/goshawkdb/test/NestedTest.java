@@ -179,7 +179,7 @@ public class NestedTest extends TestBase {
     }
 
     @Test
-    public void nestedInnerRetry() throws Exception {
+    public void nestedInnerRetry() throws InterruptedException {
         try {
             final ByteBuffer rootGuid = setRootToNZeroObjs(createConnections(1)[0], 1);
             final CountDownLatch retryLatch = new CountDownLatch(1);
@@ -187,8 +187,11 @@ public class NestedTest extends TestBase {
                 final RefCap[] rootRefs = awaitRootVersionChange(c, rootGuid, 1);
                 final RefCap objRef = rootRefs[0];
                 if (tId == 0) {
-                    retryLatch.await();
-                    Thread.sleep(250);
+                    try {
+                        retryLatch.await();
+                        Thread.sleep(250);
+                    } catch (final InterruptedException e) {
+                    }
                     c.transact(txn -> {
                         txn.write(objRef, ByteBuffer.wrap("magic".getBytes()));
                         return null;

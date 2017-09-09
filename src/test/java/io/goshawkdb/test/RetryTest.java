@@ -39,8 +39,11 @@ public class RetryTest extends TestBase {
                 final RefCap objRef = rootRefs[0];
 
                 if (tId == 0) {
-                    retryLatch.await();
-                    Thread.sleep(250);
+                    try {
+                        retryLatch.await();
+                        Thread.sleep(250);
+                    } catch (final InterruptedException e) {
+                    }
                     System.out.println("All retriers have retried. Going to modify value.");
                     c.transact(txn -> {
                         txn.write(objRef, ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN).putLong(0, magicNumber));
@@ -98,8 +101,11 @@ public class RetryTest extends TestBase {
                 final RefCap[] rootRefs = awaitRootVersionChange(c, rootGuid, 3);
 
                 if (tId == 0) {
-                    retryLatch.await();
-                    Thread.sleep(250);
+                    try {
+                        retryLatch.await();
+                        Thread.sleep(250);
+                    } catch (final InterruptedException e) {
+                    }
                     c.transact(txn -> {
                         final RefCap obj = rootRefs[changeIdx];
                         txn.write(obj, ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN).putLong(0, magicNumber));
