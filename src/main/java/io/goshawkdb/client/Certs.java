@@ -6,6 +6,7 @@ import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.jsse.provider.BouncyCastleJsseProvider;
 import org.bouncycastle.math.ec.ECPoint;
 import org.bouncycastle.openssl.PEMKeyPair;
 import org.bouncycastle.openssl.PEMParser;
@@ -30,14 +31,13 @@ import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
-import java.util.Collections;
+import java.util.Arrays;
 
 import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManagerFactory;
 
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
 /**
@@ -48,10 +48,11 @@ public class Certs {
 
     static {
         Security.addProvider(new BouncyCastleProvider());
+        Security.addProvider(new BouncyCastleJsseProvider());
     }
 
     // The only cipher that GoshawkDB speaks.
-    public static final String CIPHER = "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256";
+    public static final String[] CIPHERS = new String[]{"TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256"};
 
     private final KeyFactory keyFactory;
 
@@ -71,7 +72,7 @@ public class Certs {
      * @throws NoSuchAlgorithmException if ECDSA support can't be found
      */
     public Certs() throws NoSuchProviderException, NoSuchAlgorithmException {
-        keyFactory = KeyFactory.getInstance("ECDSA", "BC");
+        keyFactory = KeyFactory.getInstance("ECDSA", BouncyCastleProvider.PROVIDER_NAME);
     }
 
     private Certs ensureKeyStore() throws CertificateException, NoSuchAlgorithmException, IOException, KeyStoreException {
@@ -240,7 +241,7 @@ public class Certs {
                 throw new InvalidKeyException("ClientKeyPair's public key does not match the public key in ClientCertificateHolder");
             }
             clientPrivateKey = keyFactory.generatePrivate(new PKCS8EncodedKeySpec(clientKeyPair.getPrivateKeyInfo().getEncoded()));
-            clientCertificate = new JcaX509CertificateConverter().setProvider("BC").getCertificate(clientCertificateHolder);
+            clientCertificate = new JcaX509CertificateConverter().setProvider(BouncyCastleProvider.PROVIDER_NAME).getCertificate(clientCertificateHolder);
         }
     }
 
@@ -248,10 +249,12 @@ public class Certs {
         if (clientCertificateHolder == null || clientKeyPair == null) {
             throw new IllegalStateException("ClientCertificateHolder and ClientKeyPair must be provided");
         }
+
         return SslContextBuilder.forClient()
-                .sslProvider(SslProvider.JDK)
+                .sslContextProvider(new BouncyCastleJsseProvider())
+                .protocols("TLSv1.2")
                 .trustManager(getTrustManagerFactory())
-                .ciphers(Collections.singletonList(CIPHER))
+                .ciphers(Arrays.asList(CIPHERS))
                 .keyManager(clientPrivateKey, clientCertificate)
                 .sessionCacheSize(0)
                 .sessionTimeout(0)
