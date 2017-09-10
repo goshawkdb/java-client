@@ -13,31 +13,29 @@ import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Queue;
+import java.util.Random;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
 import io.goshawkdb.client.Certs;
 import io.goshawkdb.client.Connection;
 import io.goshawkdb.client.ConnectionFactory;
-import io.goshawkdb.client.GoshawkObjRef;
-import io.goshawkdb.client.Transaction;
-import io.goshawkdb.client.TransactionFunction;
-import io.goshawkdb.client.TransactionResult;
-import io.goshawkdb.client.TxnId;
+import io.goshawkdb.client.RefCap;
+import io.goshawkdb.client.ValueRefs;
 
 import static junit.framework.TestCase.assertNotNull;
 
 public class TestBase {
 
     public interface ParRunner {
-        void run(final int parIndex, final Connection conn, final Queue<Exception> exceptionQ) throws Exception;
+        void run(final int parIndex, final Connection conn) throws RuntimeException;
     }
 
     private final ConnectionFactory factory;
     private final Certs certs;
     private final String[] hosts;
     private final List<Connection> connections = new ArrayList<>();
-    private final String rootName;
+    private final Random rng = new Random();
+    public final String rootName;
 
     protected TestBase() throws NoSuchProviderException, NoSuchAlgorithmException, CertificateException, KeyStoreException, IOException, InvalidKeySpecException, InvalidKeyException {
         final String clusterCertPath = getEnv("CLUSTER_CERT");
@@ -77,8 +75,8 @@ public class TestBase {
         return conns;
     }
 
-    protected void inParallel(final int parCount, final ParRunner runner) throws Exception {
-        final ConcurrentLinkedDeque<Exception> exceptionQueue = new ConcurrentLinkedDeque<>();
+    protected void inParallel(final int parCount, final ParRunner runner) throws InterruptedException {
+        final ConcurrentLinkedDeque<RuntimeException> exceptionQueue = new ConcurrentLinkedDeque<>();
         final Connection[] conns = createConnections(parCount);
         final Thread[] threads = new Thread[parCount];
         for (int idx = 0; idx < parCount; idx++) {
@@ -86,8 +84,8 @@ public class TestBase {
             final Connection conn = conns[idxCopy];
             threads[idx] = new Thread(() -> {
                 try {
-                    runner.run(idxCopy, conn, exceptionQueue);
-                } catch (final Exception e) {
+                    runner.run(idxCopy, conn);
+                } catch (final RuntimeException e) {
                     exceptionQueue.add(e);
                 }
             });
@@ -98,64 +96,56 @@ public class TestBase {
         for (final Thread t : threads) {
             t.join();
         }
-        final Exception e = exceptionQueue.peek();
+        final RuntimeException e = exceptionQueue.peek();
         if (e != null) {
             throw e;
         }
-    }
-
-    protected <T> T runTransaction(final Connection c, final TransactionFunction<T> fun) {
-        final TransactionResult<T> result = c.runTransaction(fun);
-        if (result.isSuccessful()) {
-            return result.result;
-        } else {
-            throw new RuntimeException(result.cause);
-        }
-    }
-
-    protected GoshawkObjRef getRoot(final Transaction txn) {
-        final GoshawkObjRef root = txn.getRoots().get(rootName);
-        if (root == null) {
-            throw new IllegalStateException("No root named '" + rootName + "' is available");
-        }
-        return root;
-    }
-
-    /**
-     * Sets the root object to 8 0-bytes, with no references.
-     */
-    protected TxnId setRootToZeroInt64(final Connection c) {
-        return runTransaction(c, txn -> {
-            final GoshawkObjRef root = getRoot(txn);
-            root.set(ByteBuffer.allocate(8));
-            return root.getVersion();
-        });
     }
 
     /**
      * Creates n objects, each with 8 0-bytes as their value, and links to all of them from the root
      * object, which has an empty value set.
      */
-    protected TxnId setRootToNZeroObjs(final Connection c, final int n) {
-        return runTransaction(c, txn -> {
-            final GoshawkObjRef[] objs = new GoshawkObjRef[n];
+    protected ByteBuffer setRootToNZeroObjs(final Connection c, final int n) {
+        final byte[] bytes = new byte[8];
+        rng.nextBytes(bytes);
+        final ByteBuffer value = ByteBuffer.wrap(bytes);
+        c.transact(txn -> {
+            final RefCap[] objs = new RefCap[n];
             for (int idx = 0; idx < n; idx++) {
-                objs[idx] = txn.createObject(ByteBuffer.allocate(8));
+                objs[idx] = txn.create(ByteBuffer.allocate(8));
+                if (txn.restartNeeded()) {
+                    return null;
+                }
             }
-            final GoshawkObjRef root = getRoot(txn);
-            root.set(ByteBuffer.allocate(0), objs);
-            return root.getVersion();
-        });
+            final RefCap root = txn.root(rootName);
+            if (root == null) {
+                throw new IllegalArgumentException("No such root: " + rootName);
+            }
+            txn.write(root, value, objs);
+            return null;
+        }).getResultOrRethrow();
+        return value;
     }
 
-    protected TxnId awaitRootVersionChange(final Connection c, final TxnId oldVsn) {
-        return runTransaction(c, txn -> {
-            final GoshawkObjRef root = getRoot(txn);
-            if (root.getVersion().equals(oldVsn)) {
-                txn.retry();
+    protected RefCap[] awaitRootVersionChange(final Connection c, final ByteBuffer value, final int refsCount) {
+        return c.transact(txn -> {
+            final RefCap root = txn.root(rootName);
+            if (root == null) {
+                throw new IllegalArgumentException("No such root: " + rootName);
+            } else {
+                final ValueRefs vr = txn.read(root);
+                if (txn.restartNeeded()) {
+                    return null;
+                }
+                if (!vr.value.equals(value) || vr.references.length != refsCount) {
+                    txn.retry();
+                    return null;
+                } else {
+                    return vr.references;
+                }
             }
-            return null;
-        });
+        }).getResultOrRethrow();
     }
 
     protected void shutdown() throws InterruptedException {

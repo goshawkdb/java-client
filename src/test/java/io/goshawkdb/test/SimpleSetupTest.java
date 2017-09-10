@@ -42,9 +42,10 @@ public class SimpleSetupTest {
 
         // try-with-resources auto-closes the connection
         try (final Connection c = factory.connect(certs, hosts[0])) {
-            TransactionResult<Integer> result = c.runTransaction(t -> 1);
+            TransactionResult<Integer> result = c.transact(t -> 1);
             assertEquals(1, result.result.intValue());
             assertNull(result.cause);
+            result.getResultOrRethrow();
         }
     }
 }

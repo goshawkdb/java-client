@@ -30,11 +30,10 @@ import static io.goshawkdb.client.ConnectionFactory.HEARTBEAT_INTERVAL_UNIT;
 import static io.goshawkdb.client.ConnectionFactory.KEY_LEN;
 
 /**
- * Objects of this type represent connections to a GoshawkDB node and are created through use of the
- * {@link ConnectionFactory}. A connection can only run one transaction at a time, and nested
- * transactions are supported.
+ * Objects of this type represent connections to a GoshawkDB node and are created through use of the {@link ConnectionFactory}.
+ * A connection can only run one transaction at a time, and nested transactions are supported.
  */
-public class Connection implements AutoCloseable {
+public class Connection implements AutoCloseable, Transactor {
 
     @ChannelHandler.Sharable
     private static class TxnSubmitter extends ChannelDuplexHandler {
@@ -56,7 +55,7 @@ public class Connection implements AutoCloseable {
 
     private final ChannelDuplexHandler txnSubmitter = new TxnSubmitter() {
         @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        public void channelRead(final ChannelHandlerContext ctx, final Object msg) throws Exception {
             if (msg instanceof MessageReaderRefCount) {
                 MessageReaderRefCount read = (MessageReaderRefCount) msg;
                 final ConnectionCap.ClientMessage.Reader result = read.msg.getRoot(ConnectionCap.ClientMessage.factory);
@@ -93,11 +92,11 @@ public class Connection implements AutoCloseable {
     private ChannelFuture connectFuture;
     private State state;
     private ChannelPipeline pipeline;
-    private Map<String, Cache.RefCap> roots;
+    private Map<String, RefCap> roots;
     private ByteBuffer nameSpace;
     private long nextVarUUId;
     private long nextTxnId;
-    private TransactionImpl<?> txn;
+    private boolean hasTxn;
 
     Connection(final ConnectionFactory cf, final Certs c, final String h, final int p) {
         port = p;
@@ -145,16 +144,13 @@ public class Connection implements AutoCloseable {
      */
     public boolean isConnected() {
         synchronized (lock) {
-            if (connectFuture != null) {
-                return connectFuture.channel().isActive() && roots != null;
-            }
+            return connectFuture != null && connectFuture.channel().isActive() && roots != null;
         }
-        return false;
     }
 
     /**
-     * Blocks until the connection has been closed. Does not cause the connection to close, merely
-     * waits until it has been closed.
+     * Blocks until the connection has been closed. Does not cause the connection to close, merely waits until it has been
+     * closed.
      *
      * @throws InterruptedException if an interruption occurs.
      */
@@ -173,8 +169,7 @@ public class Connection implements AutoCloseable {
     /**
      * Close the connection. Blocks until the connection has been closed.
      *
-     * @throws InterruptedException if an interruption occurs whilst we're waiting for the
-     *                              connection to close.
+     * @throws InterruptedException if an interruption occurs whilst we're waiting for the connection to close.
      */
     @Override
     public void close() throws InterruptedException {
@@ -192,30 +187,31 @@ public class Connection implements AutoCloseable {
     /**
      * Run a transaction.
      *
-     * @param fun The transaction function to run. This will be automatically restarted as many
-     *            times as necessary until the transaction either commits or chooses to abort.
+     * @param fun The transaction function to run. This will be automatically restarted as many times as necessary until the
+     *            transaction either commits or chooses to abort.
      * @param <R> The type of the result of the transaction function.
      * @return The result of the transaction function.
      */
-    public <R> TransactionResult<R> runTransaction(final TransactionFunction<R> fun) {
-        final Map<String, Cache.RefCap> r;
-        final TransactionImpl<?> oldTxn;
+    public <R> TransactionResult<R> transact(final TransactionFunction<? extends R> fun) {
+        final Map<String, RefCap> r;
+        final Cache c;
         synchronized (lock) {
             if (roots == null) {
                 throw new IllegalStateException("Unable to start transaction: roots are not ready");
+            } else if (hasTxn) {
+                throw new IllegalStateException("Transaction already in progress.");
+            } else {
+                hasTxn = true;
+                r = roots;
+                c = cache;
             }
-            r = roots;
-            oldTxn = txn;
         }
-        final TransactionImpl<R> curTxn = new TransactionImpl<>(fun, this, this.cache, r, oldTxn);
-        synchronized (lock) {
-            txn = curTxn;
-        }
+        final TransactionImpl<R> curTxn = new TransactionImpl<>(this, c, r, null);
         try {
-            return curTxn.run();
+            return curTxn.run(fun);
         } finally {
             synchronized (lock) {
-                txn = oldTxn;
+                hasTxn = false;
             }
         }
     }
@@ -235,10 +231,10 @@ public class Connection implements AutoCloseable {
             lock.notifyAll();
             throw new IllegalStateException("Cluster is not yet formed; No roots have been created.");
         } else {
-            final Map<String, Cache.RefCap> roots = new HashMap<>();
+            final Map<String, RefCap> roots = new HashMap<>();
             for (ConnectionCap.Root.Reader reader : rootsCap) {
                 final VarUUId rootId = new VarUUId(reader.getVarId().asByteBuffer());
-                roots.put(reader.getName().toString(), new Cache.RefCap(rootId, reader.getCapability()));
+                roots.put(reader.getName().toString(), new RefCap(rootId, reader.getCapability()));
             }
             cache.setRoots(roots);
             nextState(ctx);
@@ -296,7 +292,7 @@ public class Connection implements AutoCloseable {
             liveTxn = result;
             pipeline.addLast(txnSubmitter);
             pipeline.writeAndFlush(msg);
-            while (result.outcome == null && isConnected()) {
+            while (result.outcome == null && isConnected() && liveTxn == result) {
                 try {
                     lock.wait();
                 } catch (InterruptedException e) {

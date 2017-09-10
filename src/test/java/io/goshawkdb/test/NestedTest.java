@@ -11,15 +11,14 @@ import java.security.NoSuchProviderException;
 import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Arrays;
-import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
 
 import io.goshawkdb.client.Connection;
-import io.goshawkdb.client.GoshawkObjRef;
-import io.goshawkdb.client.TransactionAbortedException;
-import io.goshawkdb.client.TxnId;
+import io.goshawkdb.client.RefCap;
+import io.goshawkdb.client.ValueRefs;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -35,23 +34,23 @@ public class NestedTest extends TestBase {
             final Connection c = createConnections(1)[0];
 
             // Just read the root var from several nested txns
-            final int r0 = runTransaction(c, t0 -> {
-                final GoshawkObjRef rootObj0 = getRoot(t0);
+            final int r0 = c.transact(t0 -> {
+                final RefCap rootObj0 = t0.root(rootName);
                 assertNotNull(rootObj0);
-                final int r1 = runTransaction(c, t1 -> {
-                    final GoshawkObjRef rootObj1 = getRoot(t1);
-                    assertTrue("Should have pointer equality between the same object in nested txns", rootObj0.referencesSameAs(rootObj1));
-                    final int r2 = runTransaction(c, t2 -> {
-                        final GoshawkObjRef rootObj2 = getRoot(t2);
-                        assertTrue("Should have pointer equality between the same object in nested txns", rootObj1.referencesSameAs(rootObj2));
+                final int r1 = t0.transact(t1 -> {
+                    final RefCap rootObj1 = t1.root(rootName);
+                    assertTrue("Should have pointer equality between the same object in nested txns", rootObj0.sameReferent(rootObj1));
+                    final int r2 = t1.transact(t2 -> {
+                        final RefCap rootObj2 = t2.root(rootName);
+                        assertTrue("Should have pointer equality between the same object in nested txns", rootObj1.sameReferent(rootObj2));
                         return 42;
-                    });
+                    }).getResultOrRethrow();
                     assertEquals("Expecting to get 42 back from nested txn but got " + r2, 42, r2);
                     return 43;
-                });
+                }).getResultOrRethrow();
                 assertEquals("Expecting to get 43 back from nested txn but got " + r1, 43, r1);
                 return 44;
-            });
+            }).getResultOrRethrow();
             assertEquals("Expecting to get 44 back from nested txn but got " + r0, 44, r0);
         } finally {
             shutdown();
@@ -64,30 +63,55 @@ public class NestedTest extends TestBase {
             final Connection c = createConnections(1)[0];
 
             // A write made in a parent should be visible in the child
-            runTransaction(c, t0 -> {
-                final GoshawkObjRef rootObj0 = getRoot(t0);
-                assertNotNull(rootObj0);
-                rootObj0.set(ByteBuffer.wrap("outer".getBytes()));
-                runTransaction(c, t1 -> {
-                    final GoshawkObjRef rootObj1 = getRoot(t1);
-                    final String found1 = byteBufferToString(rootObj1.getValue(), "outer".length());
-                    assertEquals("Expected to find 'outer' but found " + found1, "outer", found1);
-                    rootObj1.set(ByteBuffer.wrap("mid".getBytes()));
-                    runTransaction(c, t2 -> {
-                        final GoshawkObjRef rootObj2 = getRoot(t2);
-                        final String found2 = byteBufferToString(rootObj2.getValue(), "mid".length());
-                        assertEquals("Expected to find 'mid' but found " + found2, "mid", found2);
-                        rootObj1.set(ByteBuffer.wrap("inner".getBytes()));
+            assertTrue(
+                    c.transact(t0 -> {
+                        final RefCap rootObj0 = t0.root(rootName);
+                        assertNotNull(rootObj0);
+                        t0.write(rootObj0, ByteBuffer.wrap("outer".getBytes()));
+                        if (t0.restartNeeded()) {
+                            return null;
+                        }
+                        assertTrue(
+                                t0.transact(t1 -> {
+                                    final RefCap rootObj1 = t1.root(rootName);
+                                    ValueRefs vr1 = t1.read(rootObj1);
+                                    if (t1.restartNeeded()) {
+                                        return null;
+                                    }
+                                    final String found1 = byteBufferToString(vr1.value, "outer".length());
+                                    assertEquals("Expected to find 'outer' but found " + found1, "outer", found1);
+                                    t1.write(rootObj1, ByteBuffer.wrap("mid".getBytes()));
+                                    if (t1.restartNeeded()) {
+                                        return null;
+                                    }
+                                    assertTrue(
+                                            t1.transact(t2 -> {
+                                                final RefCap rootObj2 = t2.root(rootName);
+                                                final ValueRefs vr2 = t2.read(rootObj1);
+                                                if (t2.restartNeeded()) {
+                                                    return null;
+                                                }
+                                                final String found2 = byteBufferToString(vr2.value, "mid".length());
+                                                assertEquals("Expected to find 'mid' but found " + found2, "mid", found2);
+                                                t2.write(rootObj2, ByteBuffer.wrap("inner".getBytes()));
+                                                return null;
+                                            }).isSuccessful());
+                                    vr1 = t1.read(rootObj1);
+                                    if (t1.restartNeeded()) {
+                                        return null;
+                                    }
+                                    final String found3 = byteBufferToString(vr1.value, "inner".length());
+                                    assertEquals("Expected to find 'inner' but found " + found3, "inner", found3);
+                                    return null;
+                                }).isSuccessful());
+                        final ValueRefs vr0 = t0.read(rootObj0);
+                        if (t0.restartNeeded()) {
+                            return null;
+                        }
+                        final String found4 = byteBufferToString(vr0.value, "inner".length());
+                        assertEquals("Expected to find 'inner' but found " + found4, "inner", found4);
                         return null;
-                    });
-                    final String found3 = byteBufferToString(rootObj1.getValue(), "inner".length());
-                    assertEquals("Expected to find 'inner' but found " + found3, "inner", found3);
-                    return null;
-                });
-                final String found4 = byteBufferToString(rootObj0.getValue(), "inner".length());
-                assertEquals("Expected to find 'inner' but found " + found4, "inner", found4);
-                return null;
-            });
+                    }).isSuccessful());
         } finally {
             shutdown();
         }
@@ -99,68 +123,99 @@ public class NestedTest extends TestBase {
             final Connection c = createConnections(1)[0];
 
             // A write made in a child which is aborted should not be seen in the parent.
-            runTransaction(c, t0 -> {
-                final GoshawkObjRef rootObj0 = getRoot(t0);
-                assertNotNull(rootObj0);
-                rootObj0.set(ByteBuffer.wrap("outer".getBytes()));
-                runTransaction(c, t1 -> {
-                    final GoshawkObjRef rootObj1 = getRoot(t1);
-                    final String found1 = byteBufferToString(rootObj1.getValue(), "outer".length());
-                    assertEquals("Expected to find 'outer' but found " + found1, "outer", found1);
-                    rootObj1.set(ByteBuffer.wrap("mid".getBytes()));
-                    final boolean aborted = c.runTransaction(t2 -> {
-                        final GoshawkObjRef rootObj2 = getRoot(t2);
-                        final String found2 = byteBufferToString(rootObj2.getValue(), "mid".length());
-                        assertEquals("Expected to find 'mid' but found " + found2, "mid", found2);
-                        rootObj1.set(ByteBuffer.wrap("inner".getBytes()));
-                        throw TransactionAbortedException.e;
-                    }).isAborted();
-                    assertTrue("Expected aborted to be true", aborted);
-                    final String found3 = byteBufferToString(rootObj1.getValue(), "mid".length());
-                    assertEquals("Expected to find 'mid' but found " + found3, "mid", found3);
-                    return null;
-                });
-                final String found4 = byteBufferToString(rootObj0.getValue(), "mid".length());
-                assertEquals("Expected to find 'mid' but found " + found4, "mid", found4);
-                return null;
-            });
+            assertTrue(
+                    c.transact(t0 -> {
+                        final RefCap rootObj0 = t0.root(rootName);
+                        assertNotNull(rootObj0);
+                        t0.write(rootObj0, ByteBuffer.wrap("outer".getBytes()));
+                        if (t0.restartNeeded()) {
+                            return null;
+                        }
+                        assertTrue(
+                                t0.transact(t1 -> {
+                                    final RefCap rootObj1 = t1.root(rootName);
+                                    ValueRefs vr1 = t1.read(rootObj1);
+                                    if (t1.restartNeeded()) {
+                                        return null;
+                                    }
+                                    final String found1 = byteBufferToString(vr1.value, "outer".length());
+                                    assertEquals("Expected to find 'outer' but found " + found1, "outer", found1);
+                                    t1.write(rootObj1, ByteBuffer.wrap("mid".getBytes()));
+                                    if (t1.restartNeeded()) {
+                                        return null;
+                                    }
+                                    assertFalse("Expected successful to be false",
+                                            t1.transact(t2 -> {
+                                                final RefCap rootObj2 = t2.root(rootName);
+                                                final ValueRefs vr2 = t2.read(rootObj2);
+                                                if (t2.restartNeeded()) {
+                                                    return null;
+                                                }
+                                                final String found2 = byteBufferToString(vr2.value, "mid".length());
+                                                assertEquals("Expected to find 'mid' but found " + found2, "mid", found2);
+                                                t2.write(rootObj2, ByteBuffer.wrap("inner".getBytes()));
+                                                t2.abort();
+                                                return null;
+                                            }).isSuccessful());
+                                    vr1 = t1.read(rootObj1);
+                                    if (t1.restartNeeded()) {
+                                        return null;
+                                    }
+                                    final String found3 = byteBufferToString(vr1.value, "mid".length());
+                                    assertEquals("Expected to find 'mid' but found " + found3, "mid", found3);
+                                    return null;
+                                }).isSuccessful());
+                        final ValueRefs vr0 = t0.read(rootObj0);
+                        if (t0.restartNeeded()) {
+                            return null;
+                        }
+                        final String found4 = byteBufferToString(vr0.value, "mid".length());
+                        assertEquals("Expected to find 'mid' but found " + found4, "mid", found4);
+                        return null;
+                    }).isSuccessful());
         } finally {
             shutdown();
         }
     }
 
     @Test
-    public void nestedInnerRetry() throws Exception {
+    public void nestedInnerRetry() throws InterruptedException {
         try {
-            final TxnId origRootVsn = setRootToZeroInt64(createConnections(1)[0]);
+            final ByteBuffer rootGuid = setRootToNZeroObjs(createConnections(1)[0], 1);
             final CountDownLatch retryLatch = new CountDownLatch(1);
-            inParallel(2, (final int tId, final Connection c, final Queue<Exception> exceptionQ) -> {
+            inParallel(2, (final int tId, final Connection c) -> {
+                final RefCap[] rootRefs = awaitRootVersionChange(c, rootGuid, 1);
+                final RefCap objRef = rootRefs[0];
                 if (tId == 0) {
-                    awaitRootVersionChange(c, origRootVsn);
-                    retryLatch.await();
-                    Thread.sleep(250);
-                    runTransaction(c, txn -> {
-                        getRoot(txn).set(ByteBuffer.wrap("magic".getBytes()));
+                    try {
+                        retryLatch.await();
+                        Thread.sleep(250);
+                    } catch (final InterruptedException e) {
+                    }
+                    c.transact(txn -> {
+                        txn.write(objRef, ByteBuffer.wrap("magic".getBytes()));
                         return null;
-                    });
+                    }).getResultOrRethrow();
 
                 } else {
-                    runTransaction(c, t0 -> {
-                        final GoshawkObjRef rootObj0 = getRoot(t0);
-                        assertNotNull(rootObj0);
-                        final String found0 = byteBufferToString(rootObj0.getValue(), "magic".length());
+                    c.transact(t0 -> {
+                        final ValueRefs vr0 = t0.read(objRef);
+                        if (t0.restartNeeded()) {
+                            return null;
+                        }
+                        final String found0 = byteBufferToString(vr0.value, "magic".length());
                         if ("magic".equals(found0)) {
                             return null;
                         } else {
-                            return runTransaction(c, t1 -> {
+                            return t0.transact(t1 -> {
                                 // Even though we've not read root in this inner txn,
                                 // retry should still work!
                                 retryLatch.countDown();
                                 t1.retry();
                                 return null;
-                            });
+                            }).getResultOrRethrow();
                         }
-                    });
+                    }).getResultOrRethrow();
                 }
             });
         } finally {
@@ -174,26 +229,46 @@ public class NestedTest extends TestBase {
             // A create made in a child, returned to the parent should both be
             // directly usable and writable.
             final Connection c = createConnections(1)[0];
-            runTransaction(c, t0 -> {
-                final GoshawkObjRef rootObj0 = getRoot(t0);
-                final GoshawkObjRef obj0 = c.runTransaction(t1 -> {
-                    final GoshawkObjRef obj1 = t1.createObject(ByteBuffer.wrap("Hello".getBytes()));
-                    getRoot(t1).set(null, obj1);
+            c.transact(t0 -> {
+                final RefCap rootObj0 = t0.root(rootName);
+                assertNotNull(rootObj0);
+                final RefCap obj0 = t0.transact(t1 -> {
+                    final RefCap obj1 = t1.create(ByteBuffer.wrap("Hello".getBytes()));
+                    if (t1.restartNeeded()) {
+                        return null;
+                    }
+                    t1.write(t1.root(rootName), null, obj1);
                     return obj1;
-                }).getResultOrAbort();
-                final GoshawkObjRef[] refs = rootObj0.getReferences();
-                if (refs.length != 1 || refs[0] != obj0) {
-                    fail("Expected to find obj0 as only ref from root. Instead found " + Arrays.toString(refs));
+                }).getResultOrRethrow();
+                ValueRefs vr0 = t0.read(rootObj0);
+                if (t0.restartNeeded()) {
+                    return null;
                 }
-                final String val0 = byteBufferToString(refs[0].getValue(), "Hello".length());
+                if (vr0.references.length != 1 || !vr0.references[0].sameReferent(obj0)) {
+                    fail("Expected to find obj0 as only ref from root. Instead found " + Arrays.toString(vr0.references));
+                }
+                final ValueRefs vr1 = t0.read(obj0);
+                if (t0.restartNeeded()) {
+                    return null;
+                }
+                final String val0 = byteBufferToString(vr1.value, "Hello".length());
                 assertEquals("Expected to find 'Hello' as value of obj0. Instead found " + val0, "Hello", val0);
-                obj0.set(ByteBuffer.wrap("Goodbye".getBytes()));
+                t0.write(obj0, ByteBuffer.wrap("Goodbye".getBytes()));
                 return null;
-            });
+            }).getResultOrRethrow();
 
-            final String val1 = runTransaction(c, t0 ->
-                    byteBufferToString(getRoot(t0).getReferences()[0].getValue(), "Goodbye".length())
-            );
+
+            final String val1 = c.transact(t0 -> {
+                final ValueRefs vr0 = t0.read(t0.root(rootName));
+                if (t0.restartNeeded()) {
+                    return null;
+                }
+                final ValueRefs vr1 = t0.read(vr0.references[0]);
+                if (t0.restartNeeded()) {
+                    return null;
+                }
+                return byteBufferToString(vr1.value, "Goodbye".length());
+            }).getResultOrRethrow();
             assertEquals("Expected to find 'Goodbye' as value of obj0. Instead found " + val1, "Goodbye", val1);
         } finally {
             shutdown();

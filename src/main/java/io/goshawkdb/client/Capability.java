@@ -3,30 +3,25 @@ package io.goshawkdb.client;
 import io.goshawkdb.client.capnp.CapabilitiesCap;
 
 /**
- * GoshawkDB provides security through use of Object Capabilities. A reference / pointer to an
- * Object within GoshawkDB contains a capability. These capabilities grant the ability for a client
- * to read, write, both or neither, an object. The GoshawkDB server enforces that all actions within
- * a transaction are legal based on the capabilities the client has received.
+ * GoshawkDB provides security through use of Object Capabilities. A reference / pointer to an Object within GoshawkDB contains
+ * a capability. These capabilities grant the ability for a client to read, write, both or neither, an object. The GoshawkDB
+ * server enforces that all actions within a transaction are legal based on the capabilities the client has received.
  */
 public enum Capability {
     /**
-     * An ObjectRef with the None capability grants you no actions on
-     * the object.
+     * An ObjectRef with the None capability grants you no actions on the object.
      */
     None,
     /**
-     * An ObjectRef with the Read capability grants you the ability to
-     * read the object value, its version and its references.
+     * An ObjectRef with the Read capability grants you the ability to read the object value, its version and its references.
      */
     Read,
     /**
-     * An ObjectRef with the Write capability grants you the ability to
-     * set (write) the object value and references.
+     * An ObjectRef with the Write capability grants you the ability to set (write) the object value and references.
      */
     Write,
     /**
-     * An ObjectRef with the ReadWrite capability grants you both the
-     * Read and Write capabilities.
+     * An ObjectRef with the ReadWrite capability grants you both the Read and Write capabilities.
      */
     ReadWrite;
 
@@ -62,6 +57,26 @@ public enum Capability {
      */
     public boolean canWrite() {
         return this == Write || this == ReadWrite;
+    }
+
+    public Capability denyRead() {
+        if (this == ReadWrite) {
+            return Write;
+        } else if (this == Read) {
+            return None;
+        } else {
+            return this;
+        }
+    }
+
+    public Capability denyWrite() {
+        if (this == ReadWrite) {
+            return Read;
+        } else if (this == Write) {
+            return None;
+        } else {
+            return this;
+        }
     }
 
     static Capability fromCapnp(final CapabilitiesCap.Capability.Reader cap) {

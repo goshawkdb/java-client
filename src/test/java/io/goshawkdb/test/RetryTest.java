@@ -11,13 +11,12 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
-import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.goshawkdb.client.Connection;
-import io.goshawkdb.client.GoshawkObjRef;
-import io.goshawkdb.client.TxnId;
+import io.goshawkdb.client.RefCap;
+import io.goshawkdb.client.ValueRefs;
 
 import static org.junit.Assert.fail;
 
@@ -27,30 +26,38 @@ public class RetryTest extends TestBase {
 
     // This tests that multiple retrying txns are all woken up by a single write.
     @Test
-    public void simpleRetry() throws Exception {
+    public void simpleRetry() throws InterruptedException {
         try {
             final long magicNumber = 42L;
             final int retriers = 8;
-            final TxnId origRootVsn = setRootToZeroInt64(createConnections(1)[0]);
+            final ByteBuffer rootGuid = setRootToNZeroObjs(createConnections(1)[0], 1);
             final CountDownLatch retryLatch = new CountDownLatch(retriers);
             final CountDownLatch successLatch = new CountDownLatch(retriers);
 
-            inParallel(retriers + 1, (final int tId, final Connection c, final Queue<Exception> exceptionQ) -> {
-                awaitRootVersionChange(c, origRootVsn);
+            inParallel(retriers + 1, (final int tId, final Connection c) -> {
+                final RefCap[] rootRefs = awaitRootVersionChange(c, rootGuid, 1);
+                final RefCap objRef = rootRefs[0];
 
                 if (tId == 0) {
-                    retryLatch.await();
-                    Thread.sleep(250);
+                    try {
+                        retryLatch.await();
+                        Thread.sleep(250);
+                    } catch (final InterruptedException e) {
+                    }
                     System.out.println("All retriers have retried. Going to modify value.");
-                    runTransaction(c, txn -> {
-                        getRoot(txn).set(ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN).putLong(0, magicNumber));
+                    c.transact(txn -> {
+                        txn.write(objRef, ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN).putLong(0, magicNumber));
                         return null;
-                    });
+                    }).getResultOrRethrow();
 
                 } else {
                     final AtomicBoolean triggered = new AtomicBoolean(false);
-                    final long found = runTransaction(c, txn -> {
-                        final long num = getRoot(txn).getValue().order(ByteOrder.BIG_ENDIAN).getLong(0);
+                    final long found = c.transact(txn -> {
+                        final ValueRefs vr = txn.read(objRef);
+                        if (txn.restartNeeded()) {
+                            return null;
+                        }
+                        final long num = vr.value.order(ByteOrder.BIG_ENDIAN).getLong(0);
                         if (num == 0) {
                             if (!triggered.get()) {
                                 triggered.set(true);
@@ -60,12 +67,13 @@ public class RetryTest extends TestBase {
                                 System.out.println("" + tId + ": going to retry (was triggered).");
                             }
                             txn.retry();
+                            return null;
                         } else if (!triggered.get()) {
                             fail("" + tId + ": found " + num + " before I triggered!");
                         }
                         System.out.println("" + tId + ": found non-zero: " + num);
                         return num;
-                    });
+                    }).getResultOrRethrow();
                     if (found != magicNumber) {
                         fail("" + tId + ": expected to find " + magicNumber + " but found " + found);
                     }
@@ -86,28 +94,33 @@ public class RetryTest extends TestBase {
         try {
             final long magicNumber = 42;
             final int changeIdx = 2;
-            final TxnId origRootVsn = setRootToNZeroObjs(createConnections(1)[0], 3);
+            final ByteBuffer rootGuid = setRootToNZeroObjs(createConnections(1)[0], 3);
 
             final CountDownLatch retryLatch = new CountDownLatch(1);
-            inParallel(2, (final int tId, final Connection c, final Queue<Exception> exceptionQ) -> {
-                awaitRootVersionChange(c, origRootVsn);
+            inParallel(2, (final int tId, final Connection c) -> {
+                final RefCap[] rootRefs = awaitRootVersionChange(c, rootGuid, 3);
 
                 if (tId == 0) {
-                    retryLatch.await();
-                    Thread.sleep(250);
-                    runTransaction(c, txn -> {
-                        final GoshawkObjRef obj = getRoot(txn).getReferences()[changeIdx];
-                        obj.set(ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN).putLong(0, magicNumber));
+                    try {
+                        retryLatch.await();
+                        Thread.sleep(250);
+                    } catch (final InterruptedException e) {
+                    }
+                    c.transact(txn -> {
+                        final RefCap obj = rootRefs[changeIdx];
+                        txn.write(obj, ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN).putLong(0, magicNumber));
                         return null;
-                    });
+                    }).getResultOrRethrow();
 
                 } else {
                     final AtomicBoolean triggered = new AtomicBoolean(false);
-                    final int foundIdx = runTransaction(c, txn -> {
-                        final GoshawkObjRef[] objs = getRoot(txn).getReferences();
-                        for (int idx = 0; idx < objs.length; idx++) {
-                            final GoshawkObjRef obj = objs[idx];
-                            final long v = obj.getValue().order(ByteOrder.BIG_ENDIAN).getLong(0);
+                    final int foundIdx = c.transact(txn -> {
+                        for (int idx = 0; idx < rootRefs.length; idx++) {
+                            final ValueRefs vr = txn.read(rootRefs[idx]);
+                            if (txn.restartNeeded()) {
+                                return null;
+                            }
+                            final long v = vr.value.order(ByteOrder.BIG_ENDIAN).getLong(0);
                             if (v != 0) {
                                 return idx;
                             }
@@ -117,9 +130,8 @@ public class RetryTest extends TestBase {
                             retryLatch.countDown();
                         }
                         txn.retry();
-                        fail("" + tId + ": Reached unreachable code");
                         return null;
-                    });
+                    }).getResultOrRethrow();
                     if (foundIdx != changeIdx) {
                         fail("" + tId + ": Expected to find " + changeIdx + " had changed, but actually found " + foundIdx);
                     }

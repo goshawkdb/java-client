@@ -6,6 +6,7 @@ import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.jsse.provider.BouncyCastleJsseProvider;
 import org.bouncycastle.math.ec.ECPoint;
 import org.bouncycastle.openssl.PEMKeyPair;
 import org.bouncycastle.openssl.PEMParser;
@@ -30,28 +31,28 @@ import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
-import java.util.Collections;
+import java.util.Arrays;
 
 import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManagerFactory;
 
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
 /**
- * Class for managing the cluster ECDSA certificate and public key, and the client ECDSA certificate
- * and key pair. GoshawkDB only speaks TLSv1.2 on TCP, and only uses ECDSA keys on P256.
+ * Class for managing the cluster ECDSA certificate and public key, and the client ECDSA certificate and key pair. GoshawkDB
+ * only speaks TLSv1.2 on TCP, and only uses ECDSA keys on P256.
  */
 public class Certs {
 
     static {
         Security.addProvider(new BouncyCastleProvider());
+        Security.addProvider(new BouncyCastleJsseProvider());
     }
 
     // The only cipher that GoshawkDB speaks.
-    public static final String CIPHER = "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256";
+    public static final String[] CIPHERS = new String[]{"TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256"};
 
     private final KeyFactory keyFactory;
 
@@ -71,7 +72,7 @@ public class Certs {
      * @throws NoSuchAlgorithmException if ECDSA support can't be found
      */
     public Certs() throws NoSuchProviderException, NoSuchAlgorithmException {
-        keyFactory = KeyFactory.getInstance("ECDSA", "BC");
+        keyFactory = KeyFactory.getInstance("ECDSA", BouncyCastleProvider.PROVIDER_NAME);
     }
 
     private Certs ensureKeyStore() throws CertificateException, NoSuchAlgorithmException, IOException, KeyStoreException {
@@ -83,12 +84,11 @@ public class Certs {
     }
 
     /**
-     * Provided in case you wish to provide your own keystore (for example one that is stored on
-     * disk rather than an ephemeral one). The keystore is only used to hold the cluster
-     * certificate, and thus validate the certificate presented by the GoshawkDB node to which you
-     * connect (as opposed to the client certificate and key pair. I.e. even if you set a key store,
-     * you still need to call setClientCertificateHolder and setClientKeyPair, or parseClientPEM).
-     * If you supply your own KeyStore, you must have initialized it yourself.
+     * Provided in case you wish to provide your own keystore (for example one that is stored on disk rather than an ephemeral
+     * one). The keystore is only used to hold the cluster certificate, and thus validate the certificate presented by the
+     * GoshawkDB node to which you connect (as opposed to the client certificate and key pair. I.e. even if you set a key
+     * store, you still need to call setClientCertificateHolder and setClientKeyPair, or parseClientPEM). If you supply your
+     * own KeyStore, you must have initialized it yourself.
      *
      * @param ks The KeyStore to use.
      * @return A new Certs
@@ -109,9 +109,8 @@ public class Certs {
     }
 
     /**
-     * Loads a single X.509 certificate from the provided InputStream into the current KeyStore. If
-     * no KeyStore has been set, certificates will be loaded into a fresh ephemeral KeyStore. Will
-     * always close the InputStream.
+     * Loads a single X.509 certificate from the provided InputStream into the current KeyStore. If no KeyStore has been set,
+     * certificates will be loaded into a fresh ephemeral KeyStore. Will always close the InputStream.
      *
      * @param alias The name under which to store the certificate (just pick something sane)
      * @param is    The InputStream to read the certificate from.
@@ -141,10 +140,9 @@ public class Certs {
     }
 
     /**
-     * Set the ClientCertificateHolder. This is the X.509 certificate and public key the client will
-     * present to the GoshawkDB node for authentication. The public key must be an ECDSA P256 key.
-     * Once the ClientCertificateHolder and the ClientKeyPair are both set, it is verified that they
-     * both contain the same public key.
+     * Set the ClientCertificateHolder. This is the X.509 certificate and public key the client will present to the GoshawkDB
+     * node for authentication. The public key must be an ECDSA P256 key. Once the ClientCertificateHolder and the
+     * ClientKeyPair are both set, it is verified that they both contain the same public key.
      *
      * @param certHolder The holder for the client certificate and public key
      * @return The Certs object for method chaining
@@ -157,9 +155,8 @@ public class Certs {
     }
 
     /**
-     * Set the ClientKeyPair. This must be an ECDSA P256 key pair in PEM format. Once the
-     * ClientCertificateHolder and the ClientKeyPair are both set, it is verified that they both
-     * contain the same public key.
+     * Set the ClientKeyPair. This must be an ECDSA P256 key pair in PEM format. Once the ClientCertificateHolder and the
+     * ClientKeyPair are both set, it is verified that they both contain the same public key.
      *
      * @param keyPair The client public and private key pair
      * @return The Certs object for method chaining
@@ -172,10 +169,9 @@ public class Certs {
     }
 
     /**
-     * Parse the contents of the provided Reader for an X.509 Certificate with public key, and a PEM
-     * Key Pair, and calls setClientCertificateHolder and setClientKeyPair as appropriate. Only the
-     * first X.509 Certificate and the first PEM Key Pair are read, but order within the Reader does
-     * not matter. The Reader is always closed.
+     * Parse the contents of the provided Reader for an X.509 Certificate with public key, and a PEM Key Pair, and calls
+     * setClientCertificateHolder and setClientKeyPair as appropriate. Only the first X.509 Certificate and the first PEM Key
+     * Pair are read, but order within the Reader does not matter. The Reader is always closed.
      *
      * @param reader The reader to read from
      * @return The Certs object for method chaining
@@ -240,7 +236,7 @@ public class Certs {
                 throw new InvalidKeyException("ClientKeyPair's public key does not match the public key in ClientCertificateHolder");
             }
             clientPrivateKey = keyFactory.generatePrivate(new PKCS8EncodedKeySpec(clientKeyPair.getPrivateKeyInfo().getEncoded()));
-            clientCertificate = new JcaX509CertificateConverter().setProvider("BC").getCertificate(clientCertificateHolder);
+            clientCertificate = new JcaX509CertificateConverter().setProvider(BouncyCastleProvider.PROVIDER_NAME).getCertificate(clientCertificateHolder);
         }
     }
 
@@ -248,10 +244,12 @@ public class Certs {
         if (clientCertificateHolder == null || clientKeyPair == null) {
             throw new IllegalStateException("ClientCertificateHolder and ClientKeyPair must be provided");
         }
+
         return SslContextBuilder.forClient()
-                .sslProvider(SslProvider.JDK)
+                .sslContextProvider(new BouncyCastleJsseProvider())
+                .protocols("TLSv1.2")
                 .trustManager(getTrustManagerFactory())
-                .ciphers(Collections.singletonList(CIPHER))
+                .ciphers(Arrays.asList(CIPHERS))
                 .keyManager(clientPrivateKey, clientCertificate)
                 .sessionCacheSize(0)
                 .sessionTimeout(0)
