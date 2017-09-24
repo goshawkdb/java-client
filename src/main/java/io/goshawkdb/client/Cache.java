@@ -12,9 +12,10 @@ import java.util.Map;
 
 import io.goshawkdb.client.capnp.TransactionCap;
 
+import static io.goshawkdb.client.capnp.TransactionCap.ClientActionType.CREATE;
+
 final class Cache {
     static class ValueRef {
-        TxnId version;
         ByteBuffer value;
         RefCap[] references;
         MessageReaderRefCount reader;
@@ -56,71 +57,58 @@ final class Cache {
             while (actionIt.hasNext()) {
                 final TransactionCap.ClientAction.Reader action = actionIt.next();
                 final VarUUId vUUId = new VarUUId(action.getVarId().asByteBuffer());
-                switch (action.which()) {
-                    case WRITE: {
-                        final TransactionCap.ClientAction.Write.Reader write = action.getWrite();
-                        final StructList.Reader<TransactionCap.ClientVarIdPos.Reader> refs = write.getReferences();
-                        updateFromWrite(txnId, vUUId, write.getValue(), refs, null, false);
-                        break;
-                    }
-                    case READWRITE: {
-                        final TransactionCap.ClientAction.Readwrite.Reader rw = action.getReadwrite();
-                        final StructList.Reader<TransactionCap.ClientVarIdPos.Reader> refs = rw.getReferences();
-                        updateFromWrite(txnId, vUUId, rw.getValue(), refs, null, false);
-                        break;
-                    }
+                switch (action.getActionType()) {
+                    case WRITE_ONLY:
+                    case READ_WRITE:
                     case CREATE: {
-                        final TransactionCap.ClientAction.Create.Reader create = action.getCreate();
-                        final StructList.Reader<TransactionCap.ClientVarIdPos.Reader> refs = create.getReferences();
-                        updateFromWrite(txnId, vUUId, create.getValue(), refs, null, true);
+                        final boolean isCreate = action.getActionType() == CREATE;
+                        final TransactionCap.ClientAction.Modified.Reader mod = action.getModified();
+                        final StructList.Reader<TransactionCap.ClientVarIdPos.Reader> refs = mod.getReferences();
+                        updateFromWrite(vUUId, mod.getValue(), refs, null, isCreate);
                         break;
                     }
+                    case READ_ONLY:
+                        break;
+                    default:
+                        throw new IllegalStateException("Unexpected action type: " + action.getActionType());
                 }
             }
         }
     }
 
-    List<VarUUId> updateFromTxnAbort(final StructList.Reader<TransactionCap.ClientUpdate.Reader> updates, final MessageReaderRefCount reader) {
-        final ArrayList<VarUUId> modifiedVars = new ArrayList<>(updates.size());
-        final Iterator<TransactionCap.ClientUpdate.Reader> updatesIt = updates.iterator();
+    List<VarUUId> updateFromTxnAbort(final StructList.Reader<TransactionCap.ClientAction.Reader> actions, final MessageReaderRefCount reader) {
+        final ArrayList<VarUUId> modifiedVars = new ArrayList<>(actions.size());
         synchronized (lock) {
-            while (updatesIt.hasNext()) {
-                final TransactionCap.ClientUpdate.Reader update = updatesIt.next();
-                final TxnId txnId = new TxnId(update.getVersion().asByteBuffer());
-                final StructList.Reader<TransactionCap.ClientAction.Reader> actions = update.getActions();
-                actions.forEach((final TransactionCap.ClientAction.Reader action) -> {
-                    final VarUUId vUUId = new VarUUId(action.getVarId().asByteBuffer());
-                    switch (action.which()) {
-                        case DELETE: {
-                            updateFromDelete(vUUId, txnId);
-                            break;
-                        }
-                        case WRITE: {
-                            // We're missing TxnId and TxnId made a write of id (to
-                            // version TxnId).
-                            final TransactionCap.ClientAction.Write.Reader write = action.getWrite();
-                            final StructList.Reader<TransactionCap.ClientVarIdPos.Reader> refs = write.getReferences();
-                            if (updateFromWrite(txnId, vUUId, write.getValue(), refs, reader, false)) {
-                                modifiedVars.add(vUUId);
-                            }
-                            break;
-                        }
+            actions.forEach((final TransactionCap.ClientAction.Reader action) -> {
+                final VarUUId vUUId = new VarUUId(action.getVarId().asByteBuffer());
+                switch (action.getActionType()) {
+                    case DELETE: {
+                        updateFromDelete(vUUId);
+                        break;
                     }
-                });
-            }
+                    case WRITE_ONLY: {
+                        // We're missing TxnId and TxnId made a write of id
+                        // (to version TxnId) (though we no longer have
+                        // versions in the client).
+                        final TransactionCap.ClientAction.Modified.Reader mod = action.getModified();
+                        final StructList.Reader<TransactionCap.ClientVarIdPos.Reader> refs = mod.getReferences();
+                        if (updateFromWrite(vUUId, mod.getValue(), refs, reader, false)) {
+                            modifiedVars.add(vUUId);
+                        }
+                        break;
+                    }
+                }
+            });
         }
         return modifiedVars;
     }
 
-    private void updateFromDelete(final VarUUId vUUId, final TxnId txnId) {
+    private void updateFromDelete(final VarUUId vUUId) {
         final ValueRef vr = m.get(vUUId);
-        if (vr == null || vr.version == null) {
+        if (vr == null || vr.references == null) {
             throw new IllegalStateException("Divergence discovered on deletion of " + vUUId + ": server thinks we had it cached, but we don't!");
-        } else if (vr.version.equals(txnId)) {
-            throw new IllegalStateException("Divergence discovered on deletion of " + vUUId + ": server thinks we don't have " + txnId + " but we do!");
         } else {
             // nb we do not wipe out the capabilities nor the vr itself!
-            vr.version = null;
             vr.value = null;
             vr.references = null;
             if (vr.reader != null) {
@@ -130,20 +118,19 @@ final class Cache {
         }
     }
 
-    private boolean updateFromWrite(final TxnId txnId, final VarUUId vUUId, final Data.Reader value, final StructList.Reader<TransactionCap.ClientVarIdPos.Reader> refs, final MessageReaderRefCount reader, final boolean created) {
+    private boolean updateFromWrite(final VarUUId vUUId, final Data.Reader value, final StructList.Reader<TransactionCap.ClientVarIdPos.Reader> refs, final MessageReaderRefCount reader, final boolean created) {
         ValueRef vr = m.get(vUUId);
         final boolean updated = vr != null && vr.references != null;
         final RefCap[] references = new RefCap[refs.size()];
-        if (vr == null) {
+        if (vr == null && created) {
             vr = new ValueRef();
             m.put(vUUId, vr);
-        } else if (vr.version != null && vr.version.equals(txnId)) {
-            throw new IllegalStateException("Divergence discovered on update of " + vUUId + ": server thinks we don't have " + txnId + " but we do!");
+        } else if (vr == null) {
+            throw new IllegalStateException("Received update for unknown vUUId " + vUUId);
         }
         // Must use the new array because there could be txns in
         // progress that still have pointers to the old array.
         vr.references = references;
-        vr.version = txnId;
         vr.value = value.asByteBuffer().asReadOnlyBuffer().slice();
         if (reader != null) {
             reader.retain();

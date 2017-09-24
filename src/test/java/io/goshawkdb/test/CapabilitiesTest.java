@@ -265,9 +265,9 @@ public class CapabilitiesTest extends TestBase {
             //       \       v              /
             //        \-n-> obj1 <--w------/
             //
-            // However, because we're creating this whole structure in a single
-            // txn, c2 will get told about the whole txn in one go, and so
-            // should immediately learn that obj1 is read-write.
+            // Although we're creating this whole structure in a single txn, c2
+            // only gets told each object as it reads them, so as it reads obj3
+            // and obj2, it should learn more about obj1.
 
             c1.transact(txn -> {
                 final RefCap root = txn.root(rootName);
@@ -286,7 +286,31 @@ public class CapabilitiesTest extends TestBase {
                 txn.write(root, null, obj3, obj1.grantCapability(Capability.None));
                 return null;
             }).getResultOrRethrow();
-            attemptRead(c2, 2, 1, Capability.None, Capability.ReadWrite, ByteBuffer.wrap("Hello World".getBytes()));
+            // initially, c2 should not be able to read obj1
+            attemptRead(c2, 2, 1, Capability.None, Capability.None, null);
+            // but, if c2 first reads obj3, it should find it can read obj1
+            attemptRead(c2, 2, 0, Capability.ReadWrite, Capability.ReadWrite, ByteBuffer.wrap(new byte[]{}));
+            attemptRead(c2, 2, 1, Capability.None, Capability.Read, ByteBuffer.wrap("Hello World".getBytes()));
+
+            // finally, if c2 reads to obj2 then we should discover we can actually write obj1
+            c2.transact(txn -> {
+                final RefCap root = txn.root(rootName);
+                final ValueRefs rootVR = txn.read(root);
+                if (txn.restartNeeded()) {
+                    return null;
+                }
+                final RefCap obj3 = rootVR.references[0];
+                final ValueRefs obj3VR = txn.read(obj3);
+                if (txn.restartNeeded()) {
+                    return null;
+                }
+                final RefCap obj2 = obj3VR.references[0];
+                final ValueRefs obj2VR = txn.read(obj2);
+                if (txn.restartNeeded()) {
+                    return null;
+                }
+                return obj2VR.value;
+            }).getResultOrRethrow();
             attemptWrite(c2, 2, 1, Capability.None, Capability.ReadWrite, ByteBuffer.wrap("Goodbye World".getBytes()));
             attemptRead(c1, 2, 1, Capability.None, Capability.ReadWrite, ByteBuffer.wrap("Goodbye World".getBytes()));
         } finally {

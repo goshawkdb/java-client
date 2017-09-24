@@ -97,7 +97,7 @@ public final class TransactionCap {
 
 
   public static class ClientAction {
-    public static final org.capnproto.StructSize STRUCT_SIZE = new org.capnproto.StructSize((short)1,(short)4);
+    public static final org.capnproto.StructSize STRUCT_SIZE = new org.capnproto.StructSize((short)1,(short)3);
     public static final class Factory extends org.capnproto.StructFactory<Builder, Reader> {
       public Factory() {
       }
@@ -123,12 +123,8 @@ public final class TransactionCap {
       }
       public Which which() {
         switch(_getShortField(0)) {
-          case 0 : return Which.READ;
-          case 1 : return Which.WRITE;
-          case 2 : return Which.READWRITE;
-          case 3 : return Which.CREATE;
-          case 4 : return Which.DELETE;
-          case 5 : return Which.ROLL;
+          case 0 : return Which.UNMODIFIED;
+          case 1 : return Which.MODIFIED;
           default: return Which._NOT_IN_SCHEMA;
         }
       }
@@ -150,82 +146,44 @@ public final class TransactionCap {
       public final org.capnproto.Data.Builder initVarId(int size) {
         return _initPointerField(org.capnproto.Data.factory, 0, size);
       }
-      public final boolean isRead() {
-        return which() == ClientAction.Which.READ;
+      public final boolean isUnmodified() {
+        return which() == ClientAction.Which.UNMODIFIED;
       }
-      public final Read.Builder getRead() {
-        return new ClientAction.Read.Builder(segment, data, pointers, dataSize, pointerCount);
-      }
-      public final Read.Builder initRead() {
-        _setShortField(0, (short)ClientAction.Which.READ.ordinal());
-        _clearPointerField(1);
-  return new ClientAction.Read.Builder(segment, data, pointers, dataSize, pointerCount);
-      }
-
-      public final boolean isWrite() {
-        return which() == ClientAction.Which.WRITE;
-      }
-      public final Write.Builder getWrite() {
-        return new ClientAction.Write.Builder(segment, data, pointers, dataSize, pointerCount);
-      }
-      public final Write.Builder initWrite() {
-        _setShortField(0, (short)ClientAction.Which.WRITE.ordinal());
-        _clearPointerField(1);
-        _clearPointerField(2);
-  return new ClientAction.Write.Builder(segment, data, pointers, dataSize, pointerCount);
-      }
-
-      public final boolean isReadwrite() {
-        return which() == ClientAction.Which.READWRITE;
-      }
-      public final Readwrite.Builder getReadwrite() {
-        return new ClientAction.Readwrite.Builder(segment, data, pointers, dataSize, pointerCount);
-      }
-      public final Readwrite.Builder initReadwrite() {
-        _setShortField(0, (short)ClientAction.Which.READWRITE.ordinal());
-        _clearPointerField(1);
-        _clearPointerField(2);
-        _clearPointerField(3);
-  return new ClientAction.Readwrite.Builder(segment, data, pointers, dataSize, pointerCount);
-      }
-
-      public final boolean isCreate() {
-        return which() == ClientAction.Which.CREATE;
-      }
-      public final Create.Builder getCreate() {
-        return new ClientAction.Create.Builder(segment, data, pointers, dataSize, pointerCount);
-      }
-      public final Create.Builder initCreate() {
-        _setShortField(0, (short)ClientAction.Which.CREATE.ordinal());
-        _clearPointerField(1);
-        _clearPointerField(2);
-  return new ClientAction.Create.Builder(segment, data, pointers, dataSize, pointerCount);
-      }
-
-      public final boolean isDelete() {
-        return which() == ClientAction.Which.DELETE;
-      }
-      public final org.capnproto.Void getDelete() {
-        assert which() == ClientAction.Which.DELETE:
+      public final org.capnproto.Void getUnmodified() {
+        assert which() == ClientAction.Which.UNMODIFIED:
                     "Must check which() before get()ing a union member.";
         return org.capnproto.Void.VOID;
       }
-      public final void setDelete(org.capnproto.Void value) {
-        _setShortField(0, (short)ClientAction.Which.DELETE.ordinal());
+      public final void setUnmodified(org.capnproto.Void value) {
+        _setShortField(0, (short)ClientAction.Which.UNMODIFIED.ordinal());
       }
 
-      public final boolean isRoll() {
-        return which() == ClientAction.Which.ROLL;
+      public final boolean isModified() {
+        return which() == ClientAction.Which.MODIFIED;
       }
-      public final Roll.Builder getRoll() {
-        return new ClientAction.Roll.Builder(segment, data, pointers, dataSize, pointerCount);
+      public final Modified.Builder getModified() {
+        return new ClientAction.Modified.Builder(segment, data, pointers, dataSize, pointerCount);
       }
-      public final Roll.Builder initRoll() {
-        _setShortField(0, (short)ClientAction.Which.ROLL.ordinal());
+      public final Modified.Builder initModified() {
+        _setShortField(0, (short)ClientAction.Which.MODIFIED.ordinal());
         _clearPointerField(1);
         _clearPointerField(2);
-        _clearPointerField(3);
-  return new ClientAction.Roll.Builder(segment, data, pointers, dataSize, pointerCount);
+  return new ClientAction.Modified.Builder(segment, data, pointers, dataSize, pointerCount);
+      }
+
+      public final io.goshawkdb.client.capnp.TransactionCap.ClientActionType getActionType() {
+        switch(_getShortField(1)) {
+          case 0 : return io.goshawkdb.client.capnp.TransactionCap.ClientActionType.CREATE;
+          case 1 : return io.goshawkdb.client.capnp.TransactionCap.ClientActionType.READ_ONLY;
+          case 2 : return io.goshawkdb.client.capnp.TransactionCap.ClientActionType.WRITE_ONLY;
+          case 3 : return io.goshawkdb.client.capnp.TransactionCap.ClientActionType.READ_WRITE;
+          case 4 : return io.goshawkdb.client.capnp.TransactionCap.ClientActionType.DELETE;
+          case 5 : return io.goshawkdb.client.capnp.TransactionCap.ClientActionType.ROLL;
+          default: return io.goshawkdb.client.capnp.TransactionCap.ClientActionType._NOT_IN_SCHEMA;
+        }
+      }
+      public final void setActionType(io.goshawkdb.client.capnp.TransactionCap.ClientActionType value) {
+        _setShortField(1, (short)value.ordinal());
       }
 
     }
@@ -237,12 +195,8 @@ public final class TransactionCap {
 
       public Which which() {
         switch(_getShortField(0)) {
-          case 0 : return Which.READ;
-          case 1 : return Which.WRITE;
-          case 2 : return Which.READWRITE;
-          case 3 : return Which.CREATE;
-          case 4 : return Which.DELETE;
-          case 5 : return Which.ROLL;
+          case 0 : return Which.UNMODIFIED;
+          case 1 : return Which.MODIFIED;
           default: return Which._NOT_IN_SCHEMA;
         }
       }
@@ -253,63 +207,43 @@ public final class TransactionCap {
         return _getPointerField(org.capnproto.Data.factory, 0, null, 0, 0);
       }
 
-      public final boolean isRead() {
-        return which() == ClientAction.Which.READ;
+      public final boolean isUnmodified() {
+        return which() == ClientAction.Which.UNMODIFIED;
       }
-      public Read.Reader getRead() {
-        return new ClientAction.Read.Reader(segment, data, pointers, dataSize, pointerCount, nestingLimit);
-      }
-
-      public final boolean isWrite() {
-        return which() == ClientAction.Which.WRITE;
-      }
-      public Write.Reader getWrite() {
-        return new ClientAction.Write.Reader(segment, data, pointers, dataSize, pointerCount, nestingLimit);
-      }
-
-      public final boolean isReadwrite() {
-        return which() == ClientAction.Which.READWRITE;
-      }
-      public Readwrite.Reader getReadwrite() {
-        return new ClientAction.Readwrite.Reader(segment, data, pointers, dataSize, pointerCount, nestingLimit);
-      }
-
-      public final boolean isCreate() {
-        return which() == ClientAction.Which.CREATE;
-      }
-      public Create.Reader getCreate() {
-        return new ClientAction.Create.Reader(segment, data, pointers, dataSize, pointerCount, nestingLimit);
-      }
-
-      public final boolean isDelete() {
-        return which() == ClientAction.Which.DELETE;
-      }
-      public final org.capnproto.Void getDelete() {
-        assert which() == ClientAction.Which.DELETE:
+      public final org.capnproto.Void getUnmodified() {
+        assert which() == ClientAction.Which.UNMODIFIED:
                     "Must check which() before get()ing a union member.";
         return org.capnproto.Void.VOID;
       }
 
-      public final boolean isRoll() {
-        return which() == ClientAction.Which.ROLL;
+      public final boolean isModified() {
+        return which() == ClientAction.Which.MODIFIED;
       }
-      public Roll.Reader getRoll() {
-        return new ClientAction.Roll.Reader(segment, data, pointers, dataSize, pointerCount, nestingLimit);
+      public Modified.Reader getModified() {
+        return new ClientAction.Modified.Reader(segment, data, pointers, dataSize, pointerCount, nestingLimit);
+      }
+
+      public final io.goshawkdb.client.capnp.TransactionCap.ClientActionType getActionType() {
+        switch(_getShortField(1)) {
+          case 0 : return io.goshawkdb.client.capnp.TransactionCap.ClientActionType.CREATE;
+          case 1 : return io.goshawkdb.client.capnp.TransactionCap.ClientActionType.READ_ONLY;
+          case 2 : return io.goshawkdb.client.capnp.TransactionCap.ClientActionType.WRITE_ONLY;
+          case 3 : return io.goshawkdb.client.capnp.TransactionCap.ClientActionType.READ_WRITE;
+          case 4 : return io.goshawkdb.client.capnp.TransactionCap.ClientActionType.DELETE;
+          case 5 : return io.goshawkdb.client.capnp.TransactionCap.ClientActionType.ROLL;
+          default: return io.goshawkdb.client.capnp.TransactionCap.ClientActionType._NOT_IN_SCHEMA;
+        }
       }
 
     }
 
     public enum Which {
-      READ,
-      WRITE,
-      READWRITE,
-      CREATE,
-      DELETE,
-      ROLL,
+      UNMODIFIED,
+      MODIFIED,
       _NOT_IN_SCHEMA,
     }
-    public static class Read {
-      public static final org.capnproto.StructSize STRUCT_SIZE = new org.capnproto.StructSize((short)1,(short)4);
+    public static class Modified {
+      public static final org.capnproto.StructSize STRUCT_SIZE = new org.capnproto.StructSize((short)1,(short)3);
       public static final class Factory extends org.capnproto.StructFactory<Builder, Reader> {
         public Factory() {
         }
@@ -320,69 +254,7 @@ public final class TransactionCap {
           return new Builder(segment, data, pointers, dataSize, pointerCount);
         }
         public final org.capnproto.StructSize structSize() {
-          return ClientAction.Read.STRUCT_SIZE;
-        }
-        public final Reader asReader(Builder builder) {
-          return builder.asReader();
-        }
-      }
-      public static final Factory factory = new Factory();
-      public static final org.capnproto.StructList.Factory<Builder,Reader> listFactory =
-        new org.capnproto.StructList.Factory<Builder, Reader>(factory);
-      public static final class Builder extends org.capnproto.StructBuilder {
-        Builder(org.capnproto.SegmentBuilder segment, int data, int pointers,int dataSize, short pointerCount){
-          super(segment, data, pointers, dataSize, pointerCount);
-        }
-        public final Reader asReader() {
-          return new Reader(segment, data, pointers, dataSize, pointerCount, 0x7fffffff);
-        }
-        public final boolean hasVersion() {
-          return !_pointerFieldIsNull(1);
-        }
-        public final org.capnproto.Data.Builder getVersion() {
-          return _getPointerField(org.capnproto.Data.factory, 1, null, 0, 0);
-        }
-        public final void setVersion(org.capnproto.Data.Reader value) {
-          _setPointerField(org.capnproto.Data.factory, 1, value);
-        }
-        public final void setVersion(byte [] value) {
-          _setPointerField(org.capnproto.Data.factory, 1, new org.capnproto.Data.Reader(value));
-        }
-        public final org.capnproto.Data.Builder initVersion(int size) {
-          return _initPointerField(org.capnproto.Data.factory, 1, size);
-        }
-      }
-
-      public static final class Reader extends org.capnproto.StructReader {
-        Reader(org.capnproto.SegmentReader segment, int data, int pointers,int dataSize, short pointerCount, int nestingLimit){
-          super(segment, data, pointers, dataSize, pointerCount, nestingLimit);
-        }
-
-        public boolean hasVersion() {
-          return !_pointerFieldIsNull(1);
-        }
-        public org.capnproto.Data.Reader getVersion() {
-          return _getPointerField(org.capnproto.Data.factory, 1, null, 0, 0);
-        }
-
-      }
-
-    }
-
-
-    public static class Write {
-      public static final org.capnproto.StructSize STRUCT_SIZE = new org.capnproto.StructSize((short)1,(short)4);
-      public static final class Factory extends org.capnproto.StructFactory<Builder, Reader> {
-        public Factory() {
-        }
-        public final Reader constructReader(org.capnproto.SegmentReader segment, int data,int pointers, int dataSize, short pointerCount, int nestingLimit) {
-          return new Reader(segment,data,pointers,dataSize,pointerCount,nestingLimit);
-        }
-        public final Builder constructBuilder(org.capnproto.SegmentBuilder segment, int data,int pointers, int dataSize, short pointerCount) {
-          return new Builder(segment, data, pointers, dataSize, pointerCount);
-        }
-        public final org.capnproto.StructSize structSize() {
-          return ClientAction.Write.STRUCT_SIZE;
+          return ClientAction.Modified.STRUCT_SIZE;
         }
         public final Reader asReader(Builder builder) {
           return builder.asReader();
@@ -444,293 +316,6 @@ public final class TransactionCap {
         }
         public final org.capnproto.StructList.Reader<io.goshawkdb.client.capnp.TransactionCap.ClientVarIdPos.Reader> getReferences() {
           return _getPointerField(io.goshawkdb.client.capnp.TransactionCap.ClientVarIdPos.listFactory, 2, null, 0);
-        }
-
-      }
-
-    }
-
-
-    public static class Readwrite {
-      public static final org.capnproto.StructSize STRUCT_SIZE = new org.capnproto.StructSize((short)1,(short)4);
-      public static final class Factory extends org.capnproto.StructFactory<Builder, Reader> {
-        public Factory() {
-        }
-        public final Reader constructReader(org.capnproto.SegmentReader segment, int data,int pointers, int dataSize, short pointerCount, int nestingLimit) {
-          return new Reader(segment,data,pointers,dataSize,pointerCount,nestingLimit);
-        }
-        public final Builder constructBuilder(org.capnproto.SegmentBuilder segment, int data,int pointers, int dataSize, short pointerCount) {
-          return new Builder(segment, data, pointers, dataSize, pointerCount);
-        }
-        public final org.capnproto.StructSize structSize() {
-          return ClientAction.Readwrite.STRUCT_SIZE;
-        }
-        public final Reader asReader(Builder builder) {
-          return builder.asReader();
-        }
-      }
-      public static final Factory factory = new Factory();
-      public static final org.capnproto.StructList.Factory<Builder,Reader> listFactory =
-        new org.capnproto.StructList.Factory<Builder, Reader>(factory);
-      public static final class Builder extends org.capnproto.StructBuilder {
-        Builder(org.capnproto.SegmentBuilder segment, int data, int pointers,int dataSize, short pointerCount){
-          super(segment, data, pointers, dataSize, pointerCount);
-        }
-        public final Reader asReader() {
-          return new Reader(segment, data, pointers, dataSize, pointerCount, 0x7fffffff);
-        }
-        public final boolean hasVersion() {
-          return !_pointerFieldIsNull(1);
-        }
-        public final org.capnproto.Data.Builder getVersion() {
-          return _getPointerField(org.capnproto.Data.factory, 1, null, 0, 0);
-        }
-        public final void setVersion(org.capnproto.Data.Reader value) {
-          _setPointerField(org.capnproto.Data.factory, 1, value);
-        }
-        public final void setVersion(byte [] value) {
-          _setPointerField(org.capnproto.Data.factory, 1, new org.capnproto.Data.Reader(value));
-        }
-        public final org.capnproto.Data.Builder initVersion(int size) {
-          return _initPointerField(org.capnproto.Data.factory, 1, size);
-        }
-        public final boolean hasValue() {
-          return !_pointerFieldIsNull(2);
-        }
-        public final org.capnproto.Data.Builder getValue() {
-          return _getPointerField(org.capnproto.Data.factory, 2, null, 0, 0);
-        }
-        public final void setValue(org.capnproto.Data.Reader value) {
-          _setPointerField(org.capnproto.Data.factory, 2, value);
-        }
-        public final void setValue(byte [] value) {
-          _setPointerField(org.capnproto.Data.factory, 2, new org.capnproto.Data.Reader(value));
-        }
-        public final org.capnproto.Data.Builder initValue(int size) {
-          return _initPointerField(org.capnproto.Data.factory, 2, size);
-        }
-        public final boolean hasReferences() {
-          return !_pointerFieldIsNull(3);
-        }
-        public final org.capnproto.StructList.Builder<io.goshawkdb.client.capnp.TransactionCap.ClientVarIdPos.Builder> getReferences() {
-          return _getPointerField(io.goshawkdb.client.capnp.TransactionCap.ClientVarIdPos.listFactory, 3, null, 0);
-        }
-        public final void setReferences(org.capnproto.StructList.Reader<io.goshawkdb.client.capnp.TransactionCap.ClientVarIdPos.Reader> value) {
-          _setPointerField(io.goshawkdb.client.capnp.TransactionCap.ClientVarIdPos.listFactory, 3, value);
-        }
-        public final org.capnproto.StructList.Builder<io.goshawkdb.client.capnp.TransactionCap.ClientVarIdPos.Builder> initReferences(int size) {
-          return _initPointerField(io.goshawkdb.client.capnp.TransactionCap.ClientVarIdPos.listFactory, 3, size);
-        }
-      }
-
-      public static final class Reader extends org.capnproto.StructReader {
-        Reader(org.capnproto.SegmentReader segment, int data, int pointers,int dataSize, short pointerCount, int nestingLimit){
-          super(segment, data, pointers, dataSize, pointerCount, nestingLimit);
-        }
-
-        public boolean hasVersion() {
-          return !_pointerFieldIsNull(1);
-        }
-        public org.capnproto.Data.Reader getVersion() {
-          return _getPointerField(org.capnproto.Data.factory, 1, null, 0, 0);
-        }
-
-        public boolean hasValue() {
-          return !_pointerFieldIsNull(2);
-        }
-        public org.capnproto.Data.Reader getValue() {
-          return _getPointerField(org.capnproto.Data.factory, 2, null, 0, 0);
-        }
-
-        public final boolean hasReferences() {
-          return !_pointerFieldIsNull(3);
-        }
-        public final org.capnproto.StructList.Reader<io.goshawkdb.client.capnp.TransactionCap.ClientVarIdPos.Reader> getReferences() {
-          return _getPointerField(io.goshawkdb.client.capnp.TransactionCap.ClientVarIdPos.listFactory, 3, null, 0);
-        }
-
-      }
-
-    }
-
-
-    public static class Create {
-      public static final org.capnproto.StructSize STRUCT_SIZE = new org.capnproto.StructSize((short)1,(short)4);
-      public static final class Factory extends org.capnproto.StructFactory<Builder, Reader> {
-        public Factory() {
-        }
-        public final Reader constructReader(org.capnproto.SegmentReader segment, int data,int pointers, int dataSize, short pointerCount, int nestingLimit) {
-          return new Reader(segment,data,pointers,dataSize,pointerCount,nestingLimit);
-        }
-        public final Builder constructBuilder(org.capnproto.SegmentBuilder segment, int data,int pointers, int dataSize, short pointerCount) {
-          return new Builder(segment, data, pointers, dataSize, pointerCount);
-        }
-        public final org.capnproto.StructSize structSize() {
-          return ClientAction.Create.STRUCT_SIZE;
-        }
-        public final Reader asReader(Builder builder) {
-          return builder.asReader();
-        }
-      }
-      public static final Factory factory = new Factory();
-      public static final org.capnproto.StructList.Factory<Builder,Reader> listFactory =
-        new org.capnproto.StructList.Factory<Builder, Reader>(factory);
-      public static final class Builder extends org.capnproto.StructBuilder {
-        Builder(org.capnproto.SegmentBuilder segment, int data, int pointers,int dataSize, short pointerCount){
-          super(segment, data, pointers, dataSize, pointerCount);
-        }
-        public final Reader asReader() {
-          return new Reader(segment, data, pointers, dataSize, pointerCount, 0x7fffffff);
-        }
-        public final boolean hasValue() {
-          return !_pointerFieldIsNull(1);
-        }
-        public final org.capnproto.Data.Builder getValue() {
-          return _getPointerField(org.capnproto.Data.factory, 1, null, 0, 0);
-        }
-        public final void setValue(org.capnproto.Data.Reader value) {
-          _setPointerField(org.capnproto.Data.factory, 1, value);
-        }
-        public final void setValue(byte [] value) {
-          _setPointerField(org.capnproto.Data.factory, 1, new org.capnproto.Data.Reader(value));
-        }
-        public final org.capnproto.Data.Builder initValue(int size) {
-          return _initPointerField(org.capnproto.Data.factory, 1, size);
-        }
-        public final boolean hasReferences() {
-          return !_pointerFieldIsNull(2);
-        }
-        public final org.capnproto.StructList.Builder<io.goshawkdb.client.capnp.TransactionCap.ClientVarIdPos.Builder> getReferences() {
-          return _getPointerField(io.goshawkdb.client.capnp.TransactionCap.ClientVarIdPos.listFactory, 2, null, 0);
-        }
-        public final void setReferences(org.capnproto.StructList.Reader<io.goshawkdb.client.capnp.TransactionCap.ClientVarIdPos.Reader> value) {
-          _setPointerField(io.goshawkdb.client.capnp.TransactionCap.ClientVarIdPos.listFactory, 2, value);
-        }
-        public final org.capnproto.StructList.Builder<io.goshawkdb.client.capnp.TransactionCap.ClientVarIdPos.Builder> initReferences(int size) {
-          return _initPointerField(io.goshawkdb.client.capnp.TransactionCap.ClientVarIdPos.listFactory, 2, size);
-        }
-      }
-
-      public static final class Reader extends org.capnproto.StructReader {
-        Reader(org.capnproto.SegmentReader segment, int data, int pointers,int dataSize, short pointerCount, int nestingLimit){
-          super(segment, data, pointers, dataSize, pointerCount, nestingLimit);
-        }
-
-        public boolean hasValue() {
-          return !_pointerFieldIsNull(1);
-        }
-        public org.capnproto.Data.Reader getValue() {
-          return _getPointerField(org.capnproto.Data.factory, 1, null, 0, 0);
-        }
-
-        public final boolean hasReferences() {
-          return !_pointerFieldIsNull(2);
-        }
-        public final org.capnproto.StructList.Reader<io.goshawkdb.client.capnp.TransactionCap.ClientVarIdPos.Reader> getReferences() {
-          return _getPointerField(io.goshawkdb.client.capnp.TransactionCap.ClientVarIdPos.listFactory, 2, null, 0);
-        }
-
-      }
-
-    }
-
-
-    public static class Roll {
-      public static final org.capnproto.StructSize STRUCT_SIZE = new org.capnproto.StructSize((short)1,(short)4);
-      public static final class Factory extends org.capnproto.StructFactory<Builder, Reader> {
-        public Factory() {
-        }
-        public final Reader constructReader(org.capnproto.SegmentReader segment, int data,int pointers, int dataSize, short pointerCount, int nestingLimit) {
-          return new Reader(segment,data,pointers,dataSize,pointerCount,nestingLimit);
-        }
-        public final Builder constructBuilder(org.capnproto.SegmentBuilder segment, int data,int pointers, int dataSize, short pointerCount) {
-          return new Builder(segment, data, pointers, dataSize, pointerCount);
-        }
-        public final org.capnproto.StructSize structSize() {
-          return ClientAction.Roll.STRUCT_SIZE;
-        }
-        public final Reader asReader(Builder builder) {
-          return builder.asReader();
-        }
-      }
-      public static final Factory factory = new Factory();
-      public static final org.capnproto.StructList.Factory<Builder,Reader> listFactory =
-        new org.capnproto.StructList.Factory<Builder, Reader>(factory);
-      public static final class Builder extends org.capnproto.StructBuilder {
-        Builder(org.capnproto.SegmentBuilder segment, int data, int pointers,int dataSize, short pointerCount){
-          super(segment, data, pointers, dataSize, pointerCount);
-        }
-        public final Reader asReader() {
-          return new Reader(segment, data, pointers, dataSize, pointerCount, 0x7fffffff);
-        }
-        public final boolean hasVersion() {
-          return !_pointerFieldIsNull(1);
-        }
-        public final org.capnproto.Data.Builder getVersion() {
-          return _getPointerField(org.capnproto.Data.factory, 1, null, 0, 0);
-        }
-        public final void setVersion(org.capnproto.Data.Reader value) {
-          _setPointerField(org.capnproto.Data.factory, 1, value);
-        }
-        public final void setVersion(byte [] value) {
-          _setPointerField(org.capnproto.Data.factory, 1, new org.capnproto.Data.Reader(value));
-        }
-        public final org.capnproto.Data.Builder initVersion(int size) {
-          return _initPointerField(org.capnproto.Data.factory, 1, size);
-        }
-        public final boolean hasValue() {
-          return !_pointerFieldIsNull(2);
-        }
-        public final org.capnproto.Data.Builder getValue() {
-          return _getPointerField(org.capnproto.Data.factory, 2, null, 0, 0);
-        }
-        public final void setValue(org.capnproto.Data.Reader value) {
-          _setPointerField(org.capnproto.Data.factory, 2, value);
-        }
-        public final void setValue(byte [] value) {
-          _setPointerField(org.capnproto.Data.factory, 2, new org.capnproto.Data.Reader(value));
-        }
-        public final org.capnproto.Data.Builder initValue(int size) {
-          return _initPointerField(org.capnproto.Data.factory, 2, size);
-        }
-        public final boolean hasReferences() {
-          return !_pointerFieldIsNull(3);
-        }
-        public final org.capnproto.StructList.Builder<io.goshawkdb.client.capnp.TransactionCap.ClientVarIdPos.Builder> getReferences() {
-          return _getPointerField(io.goshawkdb.client.capnp.TransactionCap.ClientVarIdPos.listFactory, 3, null, 0);
-        }
-        public final void setReferences(org.capnproto.StructList.Reader<io.goshawkdb.client.capnp.TransactionCap.ClientVarIdPos.Reader> value) {
-          _setPointerField(io.goshawkdb.client.capnp.TransactionCap.ClientVarIdPos.listFactory, 3, value);
-        }
-        public final org.capnproto.StructList.Builder<io.goshawkdb.client.capnp.TransactionCap.ClientVarIdPos.Builder> initReferences(int size) {
-          return _initPointerField(io.goshawkdb.client.capnp.TransactionCap.ClientVarIdPos.listFactory, 3, size);
-        }
-      }
-
-      public static final class Reader extends org.capnproto.StructReader {
-        Reader(org.capnproto.SegmentReader segment, int data, int pointers,int dataSize, short pointerCount, int nestingLimit){
-          super(segment, data, pointers, dataSize, pointerCount, nestingLimit);
-        }
-
-        public boolean hasVersion() {
-          return !_pointerFieldIsNull(1);
-        }
-        public org.capnproto.Data.Reader getVersion() {
-          return _getPointerField(org.capnproto.Data.factory, 1, null, 0, 0);
-        }
-
-        public boolean hasValue() {
-          return !_pointerFieldIsNull(2);
-        }
-        public org.capnproto.Data.Reader getValue() {
-          return _getPointerField(org.capnproto.Data.factory, 2, null, 0, 0);
-        }
-
-        public final boolean hasReferences() {
-          return !_pointerFieldIsNull(3);
-        }
-        public final org.capnproto.StructList.Reader<io.goshawkdb.client.capnp.TransactionCap.ClientVarIdPos.Reader> getReferences() {
-          return _getPointerField(io.goshawkdb.client.capnp.TransactionCap.ClientVarIdPos.listFactory, 3, null, 0);
         }
 
       }
@@ -740,6 +325,16 @@ public final class TransactionCap {
 
   }
 
+
+  public enum ClientActionType {
+    CREATE,
+    READ_ONLY,
+    WRITE_ONLY,
+    READ_WRITE,
+    DELETE,
+    ROLL,
+    _NOT_IN_SCHEMA,
+  }
 
   public static class ClientTxnOutcome {
     public static final org.capnproto.StructSize STRUCT_SIZE = new org.capnproto.StructSize((short)1,(short)3);
@@ -825,14 +420,14 @@ public final class TransactionCap {
       public final boolean hasAbort() {
         return !_pointerFieldIsNull(2);
       }
-      public final org.capnproto.StructList.Builder<io.goshawkdb.client.capnp.TransactionCap.ClientUpdate.Builder> getAbort() {
-        return _getPointerField(io.goshawkdb.client.capnp.TransactionCap.ClientUpdate.listFactory, 2, null, 0);
+      public final org.capnproto.StructList.Builder<io.goshawkdb.client.capnp.TransactionCap.ClientAction.Builder> getAbort() {
+        return _getPointerField(io.goshawkdb.client.capnp.TransactionCap.ClientAction.listFactory, 2, null, 0);
       }
-      public final void setAbort(org.capnproto.StructList.Reader<io.goshawkdb.client.capnp.TransactionCap.ClientUpdate.Reader> value) {
-        _setPointerField(io.goshawkdb.client.capnp.TransactionCap.ClientUpdate.listFactory, 2, value);
+      public final void setAbort(org.capnproto.StructList.Reader<io.goshawkdb.client.capnp.TransactionCap.ClientAction.Reader> value) {
+        _setPointerField(io.goshawkdb.client.capnp.TransactionCap.ClientAction.listFactory, 2, value);
       }
-      public final org.capnproto.StructList.Builder<io.goshawkdb.client.capnp.TransactionCap.ClientUpdate.Builder> initAbort(int size) {
-        return _initPointerField(io.goshawkdb.client.capnp.TransactionCap.ClientUpdate.listFactory, 2, size);
+      public final org.capnproto.StructList.Builder<io.goshawkdb.client.capnp.TransactionCap.ClientAction.Builder> initAbort(int size) {
+        return _initPointerField(io.goshawkdb.client.capnp.TransactionCap.ClientAction.listFactory, 2, size);
       }
       public final boolean isError() {
         return which() == ClientTxnOutcome.Which.ERROR;
@@ -899,8 +494,8 @@ public final class TransactionCap {
       public final boolean hasAbort() {
         return !_pointerFieldIsNull(2);
       }
-      public final org.capnproto.StructList.Reader<io.goshawkdb.client.capnp.TransactionCap.ClientUpdate.Reader> getAbort() {
-        return _getPointerField(io.goshawkdb.client.capnp.TransactionCap.ClientUpdate.listFactory, 2, null, 0);
+      public final org.capnproto.StructList.Reader<io.goshawkdb.client.capnp.TransactionCap.ClientAction.Reader> getAbort() {
+        return _getPointerField(io.goshawkdb.client.capnp.TransactionCap.ClientAction.listFactory, 2, null, 0);
       }
 
       public final boolean isError() {
@@ -922,87 +517,6 @@ public final class TransactionCap {
       ERROR,
       _NOT_IN_SCHEMA,
     }
-  }
-
-
-  public static class ClientUpdate {
-    public static final org.capnproto.StructSize STRUCT_SIZE = new org.capnproto.StructSize((short)0,(short)2);
-    public static final class Factory extends org.capnproto.StructFactory<Builder, Reader> {
-      public Factory() {
-      }
-      public final Reader constructReader(org.capnproto.SegmentReader segment, int data,int pointers, int dataSize, short pointerCount, int nestingLimit) {
-        return new Reader(segment,data,pointers,dataSize,pointerCount,nestingLimit);
-      }
-      public final Builder constructBuilder(org.capnproto.SegmentBuilder segment, int data,int pointers, int dataSize, short pointerCount) {
-        return new Builder(segment, data, pointers, dataSize, pointerCount);
-      }
-      public final org.capnproto.StructSize structSize() {
-        return ClientUpdate.STRUCT_SIZE;
-      }
-      public final Reader asReader(Builder builder) {
-        return builder.asReader();
-      }
-    }
-    public static final Factory factory = new Factory();
-    public static final org.capnproto.StructList.Factory<Builder,Reader> listFactory =
-      new org.capnproto.StructList.Factory<Builder, Reader>(factory);
-    public static final class Builder extends org.capnproto.StructBuilder {
-      Builder(org.capnproto.SegmentBuilder segment, int data, int pointers,int dataSize, short pointerCount){
-        super(segment, data, pointers, dataSize, pointerCount);
-      }
-      public final Reader asReader() {
-        return new Reader(segment, data, pointers, dataSize, pointerCount, 0x7fffffff);
-      }
-      public final boolean hasVersion() {
-        return !_pointerFieldIsNull(0);
-      }
-      public final org.capnproto.Data.Builder getVersion() {
-        return _getPointerField(org.capnproto.Data.factory, 0, null, 0, 0);
-      }
-      public final void setVersion(org.capnproto.Data.Reader value) {
-        _setPointerField(org.capnproto.Data.factory, 0, value);
-      }
-      public final void setVersion(byte [] value) {
-        _setPointerField(org.capnproto.Data.factory, 0, new org.capnproto.Data.Reader(value));
-      }
-      public final org.capnproto.Data.Builder initVersion(int size) {
-        return _initPointerField(org.capnproto.Data.factory, 0, size);
-      }
-      public final boolean hasActions() {
-        return !_pointerFieldIsNull(1);
-      }
-      public final org.capnproto.StructList.Builder<io.goshawkdb.client.capnp.TransactionCap.ClientAction.Builder> getActions() {
-        return _getPointerField(io.goshawkdb.client.capnp.TransactionCap.ClientAction.listFactory, 1, null, 0);
-      }
-      public final void setActions(org.capnproto.StructList.Reader<io.goshawkdb.client.capnp.TransactionCap.ClientAction.Reader> value) {
-        _setPointerField(io.goshawkdb.client.capnp.TransactionCap.ClientAction.listFactory, 1, value);
-      }
-      public final org.capnproto.StructList.Builder<io.goshawkdb.client.capnp.TransactionCap.ClientAction.Builder> initActions(int size) {
-        return _initPointerField(io.goshawkdb.client.capnp.TransactionCap.ClientAction.listFactory, 1, size);
-      }
-    }
-
-    public static final class Reader extends org.capnproto.StructReader {
-      Reader(org.capnproto.SegmentReader segment, int data, int pointers,int dataSize, short pointerCount, int nestingLimit){
-        super(segment, data, pointers, dataSize, pointerCount, nestingLimit);
-      }
-
-      public boolean hasVersion() {
-        return !_pointerFieldIsNull(0);
-      }
-      public org.capnproto.Data.Reader getVersion() {
-        return _getPointerField(org.capnproto.Data.factory, 0, null, 0, 0);
-      }
-
-      public final boolean hasActions() {
-        return !_pointerFieldIsNull(1);
-      }
-      public final org.capnproto.StructList.Reader<io.goshawkdb.client.capnp.TransactionCap.ClientAction.Reader> getActions() {
-        return _getPointerField(io.goshawkdb.client.capnp.TransactionCap.ClientAction.listFactory, 1, null, 0);
-      }
-
-    }
-
   }
 
 
@@ -1162,12 +676,12 @@ public static final org.capnproto.SegmentReader b_9806976df3c54b38 =
    "\u0038\u004b\u00c5\u00f3\u006d\u0097\u0006\u0098" +
    "\u0018\u0000\u0000\u0000\u0001\u0000\u0001\u0000" +
    "\u007b\u00a9\u0027\u005e\u0028\u008c\u00b0\u00ef" +
-   "\u0004\u0000\u0007\u0000\u0000\u0000\u0006\u0000" +
+   "\u0003\u0000\u0007\u0000\u0000\u0000\u0002\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
    "\u0015\u0000\u0000\u0000\u002a\u0001\u0000\u0000" +
    "\u0025\u0000\u0000\u0000\u0007\u0000\u0000\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0021\u0000\u0000\u0000\u008f\u0001\u0000\u0000" +
+   "\u0021\u0000\u0000\u0000\u00e7\u0000\u0000\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
    "\u0063\u006c\u0069\u0065\u006e\u0074\u0074\u0072" +
@@ -1176,56 +690,35 @@ public static final org.capnproto.SegmentReader b_9806976df3c54b38 =
    "\u0043\u006c\u0069\u0065\u006e\u0074\u0041\u0063" +
    "\u0074\u0069\u006f\u006e\u0000\u0000\u0000\u0000" +
    "\u0000\u0000\u0000\u0000\u0001\u0000\u0001\u0000" +
-   "\u001c\u0000\u0000\u0000\u0003\u0000\u0004\u0000" +
+   "\u0010\u0000\u0000\u0000\u0003\u0000\u0004\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
    "\u0000\u0000\u0001\u0000\u0000\u0000\u0000\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u00b5\u0000\u0000\u0000\u0032\u0000\u0000\u0000" +
+   "\u0061\u0000\u0000\u0000\u0032\u0000\u0000\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u00b0\u0000\u0000\u0000\u0003\u0000\u0001\u0000" +
-   "\u00bc\u0000\u0000\u0000\u0002\u0000\u0001\u0000" +
+   "\\\u0000\u0000\u0000\u0003\u0000\u0001\u0000" +
+   "\u0068\u0000\u0000\u0000\u0002\u0000\u0001\u0000" +
    "\u0001\u0000\u00ff\u00ff\u0000\u0000\u0000\u0000" +
-   "\u0001\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u00f0\u00cc\u0012\u00c8\u00be\"\u002c\u00cc" +
-   "\u00b9\u0000\u0000\u0000\u002a\u0000\u0000\u0000" +
+   "\u0000\u0000\u0001\u0000\u0001\u0000\u0000\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
+   "\u0065\u0000\u0000\u0000\u005a\u0000\u0000\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
+   "\u0064\u0000\u0000\u0000\u0003\u0000\u0001\u0000" +
+   "\u0070\u0000\u0000\u0000\u0002\u0000\u0001\u0000" +
    "\u0002\u0000\u00fe\u00ff\u0000\u0000\u0000\u0000" +
    "\u0001\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
    "\u000b\u00b4\u0073\u008e\u00a6\u00f1\u0011\u009e" +
-   "\u00a1\u0000\u0000\u0000\u0032\u0000\u0000\u0000" +
+   "\u006d\u0000\u0000\u0000\u004a\u0000\u0000\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0003\u0000\u00fd\u00ff\u0000\u0000\u0000\u0000" +
-   "\u0001\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u004b\u00e2\u0058\u00f5\u00a3\u0025\u00f9\u00bc" +
-   "\u0089\u0000\u0000\u0000\u0052\u0000\u0000\u0000" +
+   "\u0003\u0000\u0000\u0000\u0001\u0000\u0000\u0000" +
+   "\u0000\u0000\u0001\u0000\u0004\u0000\u0000\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0004\u0000\u00fc\u00ff\u0000\u0000\u0000\u0000" +
-   "\u0001\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0047\u0028\u00fa\u00e5\u00b5\u0087\u00ee\u00e8" +
-   "\u0075\u0000\u0000\u0000\u003a\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0005\u0000\u00fb\u00ff\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0001\u0000\u0009\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u005d\u0000\u0000\u0000\u003a\u0000\u0000\u0000" +
+   "\u0059\u0000\u0000\u0000\u005a\u0000\u0000\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
    "\u0058\u0000\u0000\u0000\u0003\u0000\u0001\u0000" +
    "\u0064\u0000\u0000\u0000\u0002\u0000\u0001\u0000" +
-   "\u0006\u0000\u00fa\u00ff\u0000\u0000\u0000\u0000" +
-   "\u0001\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u001e\u008d\u007e\u0016\u005a\u00bb\u0037\u00d7" +
-   "\u0061\u0000\u0000\u0000\u002a\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
    "\u0076\u0061\u0072\u0049\u0064\u0000\u0000\u0000" +
    "\r\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
@@ -1234,12 +727,8 @@ public static final org.capnproto.SegmentReader b_9806976df3c54b38 =
    "\r\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0072\u0065\u0061\u0064\u0000\u0000\u0000\u0000" +
-   "\u0077\u0072\u0069\u0074\u0065\u0000\u0000\u0000" +
-   "\u0072\u0065\u0061\u0064\u0077\u0072\u0069\u0074" +
-   "\u0065\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0063\u0072\u0065\u0061\u0074\u0065\u0000\u0000" +
-   "\u0064\u0065\u006c\u0065\u0074\u0065\u0000\u0000" +
+   "\u0075\u006e\u006d\u006f\u0064\u0069\u0066\u0069" +
+   "\u0065\u0064\u0000\u0000\u0000\u0000\u0000\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
@@ -1247,41 +736,15 @@ public static final org.capnproto.SegmentReader b_9806976df3c54b38 =
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0072\u006f\u006c\u006c\u0000\u0000\u0000\u0000" + "");
-public static final org.capnproto.SegmentReader b_cc2c22bec812ccf0 =
-   org.capnproto.GeneratedClassSupport.decodeRawBytes(
-   "\u0000\u0000\u0000\u0000\u0005\u0000\u0006\u0000" +
-   "\u00f0\u00cc\u0012\u00c8\u00be\"\u002c\u00cc" +
-   "\u0025\u0000\u0000\u0000\u0001\u0000\u0001\u0000" +
-   "\u0038\u004b\u00c5\u00f3\u006d\u0097\u0006\u0098" +
-   "\u0004\u0000\u0007\u0000\u0001\u0000\u0000\u0000" +
+   "\u006d\u006f\u0064\u0069\u0066\u0069\u0065\u0064" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0015\u0000\u0000\u0000\u0052\u0001\u0000\u0000" +
+   "\u0061\u0063\u0074\u0069\u006f\u006e\u0054\u0079" +
+   "\u0070\u0065\u0000\u0000\u0000\u0000\u0000\u0000" +
+   "\u000f\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
+   "\u00b7\u0088\u004e\u0054\u0014\u00fd\u00e1\u00f9" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0021\u0000\u0000\u0000\u003f\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0063\u006c\u0069\u0065\u006e\u0074\u0074\u0072" +
-   "\u0061\u006e\u0073\u0061\u0063\u0074\u0069\u006f" +
-   "\u006e\u002e\u0063\u0061\u0070\u006e\u0070\u003a" +
-   "\u0043\u006c\u0069\u0065\u006e\u0074\u0041\u0063" +
-   "\u0074\u0069\u006f\u006e\u002e\u0072\u0065\u0061" +
-   "\u0064\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0004\u0000\u0000\u0000\u0003\u0000\u0004\u0000" +
-   "\u0000\u0000\u0000\u0000\u0001\u0000\u0000\u0000" +
-   "\u0000\u0000\u0001\u0000\u0001\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\r\u0000\u0000\u0000\u0042\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0008\u0000\u0000\u0000\u0003\u0000\u0001\u0000" +
-   "\u0014\u0000\u0000\u0000\u0002\u0000\u0001\u0000" +
-   "\u0076\u0065\u0072\u0073\u0069\u006f\u006e\u0000" +
-   "\r\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\r\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
+   "\u000f\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" + "");
 public static final org.capnproto.SegmentReader b_9e11f1a68e73b40b =
@@ -1290,9 +753,9 @@ public static final org.capnproto.SegmentReader b_9e11f1a68e73b40b =
    "\u000b\u00b4\u0073\u008e\u00a6\u00f1\u0011\u009e" +
    "\u0025\u0000\u0000\u0000\u0001\u0000\u0001\u0000" +
    "\u0038\u004b\u00c5\u00f3\u006d\u0097\u0006\u0098" +
-   "\u0004\u0000\u0007\u0000\u0001\u0000\u0000\u0000" +
+   "\u0003\u0000\u0007\u0000\u0001\u0000\u0000\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0015\u0000\u0000\u0000\u005a\u0001\u0000\u0000" +
+   "\u0015\u0000\u0000\u0000\u0072\u0001\u0000\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
    "\u0021\u0000\u0000\u0000\u0077\u0000\u0000\u0000" +
@@ -1302,8 +765,8 @@ public static final org.capnproto.SegmentReader b_9e11f1a68e73b40b =
    "\u0061\u006e\u0073\u0061\u0063\u0074\u0069\u006f" +
    "\u006e\u002e\u0063\u0061\u0070\u006e\u0070\u003a" +
    "\u0043\u006c\u0069\u0065\u006e\u0074\u0041\u0063" +
-   "\u0074\u0069\u006f\u006e\u002e\u0077\u0072\u0069" +
-   "\u0074\u0065\u0000\u0000\u0000\u0000\u0000\u0000" +
+   "\u0074\u0069\u006f\u006e\u002e\u006d\u006f\u0064" +
+   "\u0069\u0066\u0069\u0065\u0064\u0000\u0000\u0000" +
    "\u0008\u0000\u0000\u0000\u0003\u0000\u0004\u0000" +
    "\u0000\u0000\u0000\u0000\u0001\u0000\u0000\u0000" +
    "\u0000\u0000\u0001\u0000\u0002\u0000\u0000\u0000" +
@@ -1340,204 +803,55 @@ public static final org.capnproto.SegmentReader b_9e11f1a68e73b40b =
    "\u000e\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" + "");
-public static final org.capnproto.SegmentReader b_bcf925a3f558e24b =
+public static final org.capnproto.SegmentReader b_f9e1fd14544e88b7 =
    org.capnproto.GeneratedClassSupport.decodeRawBytes(
    "\u0000\u0000\u0000\u0000\u0005\u0000\u0006\u0000" +
-   "\u004b\u00e2\u0058\u00f5\u00a3\u0025\u00f9\u00bc" +
-   "\u0025\u0000\u0000\u0000\u0001\u0000\u0001\u0000" +
-   "\u0038\u004b\u00c5\u00f3\u006d\u0097\u0006\u0098" +
-   "\u0004\u0000\u0007\u0000\u0001\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0015\u0000\u0000\u0000\u007a\u0001\u0000\u0000" +
+   "\u00b7\u0088\u004e\u0054\u0014\u00fd\u00e1\u00f9" +
+   "\u0018\u0000\u0000\u0000\u0002\u0000\u0000\u0000" +
+   "\u007b\u00a9\u0027\u005e\u0028\u008c\u00b0\u00ef" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0021\u0000\u0000\u0000\u00af\u0000\u0000\u0000" +
+   "\u0015\u0000\u0000\u0000\u004a\u0001\u0000\u0000" +
+   "\u0029\u0000\u0000\u0000\u0007\u0000\u0000\u0000" +
+   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
+   "\u0025\u0000\u0000\u0000\u0097\u0000\u0000\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
    "\u0063\u006c\u0069\u0065\u006e\u0074\u0074\u0072" +
    "\u0061\u006e\u0073\u0061\u0063\u0074\u0069\u006f" +
    "\u006e\u002e\u0063\u0061\u0070\u006e\u0070\u003a" +
    "\u0043\u006c\u0069\u0065\u006e\u0074\u0041\u0063" +
-   "\u0074\u0069\u006f\u006e\u002e\u0072\u0065\u0061" +
-   "\u0064\u0077\u0072\u0069\u0074\u0065\u0000\u0000" +
-   "\u000c\u0000\u0000\u0000\u0003\u0000\u0004\u0000" +
-   "\u0000\u0000\u0000\u0000\u0001\u0000\u0000\u0000" +
-   "\u0000\u0000\u0001\u0000\u0004\u0000\u0000\u0000" +
+   "\u0074\u0069\u006f\u006e\u0054\u0079\u0070\u0065" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0045\u0000\u0000\u0000\u0042\u0000\u0000\u0000" +
+   "\u0000\u0000\u0000\u0000\u0001\u0000\u0001\u0000" +
+   "\u0018\u0000\u0000\u0000\u0001\u0000\u0002\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0040\u0000\u0000\u0000\u0003\u0000\u0001\u0000" +
-   "\u004c\u0000\u0000\u0000\u0002\u0000\u0001\u0000" +
-   "\u0001\u0000\u0000\u0000\u0002\u0000\u0000\u0000" +
-   "\u0000\u0000\u0001\u0000\u0005\u0000\u0000\u0000" +
+   "\u0041\u0000\u0000\u0000\u003a\u0000\u0000\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0049\u0000\u0000\u0000\u0032\u0000\u0000\u0000" +
+   "\u0001\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
+   "\u0039\u0000\u0000\u0000\u004a\u0000\u0000\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0044\u0000\u0000\u0000\u0003\u0000\u0001\u0000" +
-   "\u0050\u0000\u0000\u0000\u0002\u0000\u0001\u0000" +
-   "\u0002\u0000\u0000\u0000\u0003\u0000\u0000\u0000" +
-   "\u0000\u0000\u0001\u0000\u0006\u0000\u0000\u0000" +
+   "\u0002\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
+   "\u0035\u0000\u0000\u0000\u0052\u0000\u0000\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u004d\u0000\u0000\u0000\u005a\u0000\u0000\u0000" +
+   "\u0003\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
+   "\u0031\u0000\u0000\u0000\u0052\u0000\u0000\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u004c\u0000\u0000\u0000\u0003\u0000\u0001\u0000" +
-   "\u0068\u0000\u0000\u0000\u0002\u0000\u0001\u0000" +
-   "\u0076\u0065\u0072\u0073\u0069\u006f\u006e\u0000" +
-   "\r\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
+   "\u0004\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
+   "\u002d\u0000\u0000\u0000\u003a\u0000\u0000\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
+   "\u0005\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
+   "\u0025\u0000\u0000\u0000\u002a\u0000\u0000\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
+   "\u0063\u0072\u0065\u0061\u0074\u0065\u0000\u0000" +
+   "\u0072\u0065\u0061\u0064\u004f\u006e\u006c\u0079" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\r\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0076\u0061\u006c\u0075\u0065\u0000\u0000\u0000" +
-   "\r\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\r\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0072\u0065\u0066\u0065\u0072\u0065\u006e\u0063" +
-   "\u0065\u0073\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u000e\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0003\u0000\u0001\u0000" +
-   "\u0010\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u00ca\u0014\u00f9\u0021\u00e5\u0098\u00cb\u0093" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u000e\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" + "");
-public static final org.capnproto.SegmentReader b_e8ee87b5e5fa2847 =
-   org.capnproto.GeneratedClassSupport.decodeRawBytes(
-   "\u0000\u0000\u0000\u0000\u0005\u0000\u0006\u0000" +
-   "\u0047\u0028\u00fa\u00e5\u00b5\u0087\u00ee\u00e8" +
-   "\u0025\u0000\u0000\u0000\u0001\u0000\u0001\u0000" +
-   "\u0038\u004b\u00c5\u00f3\u006d\u0097\u0006\u0098" +
-   "\u0004\u0000\u0007\u0000\u0001\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0015\u0000\u0000\u0000\u0062\u0001\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0021\u0000\u0000\u0000\u0077\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0063\u006c\u0069\u0065\u006e\u0074\u0074\u0072" +
-   "\u0061\u006e\u0073\u0061\u0063\u0074\u0069\u006f" +
-   "\u006e\u002e\u0063\u0061\u0070\u006e\u0070\u003a" +
-   "\u0043\u006c\u0069\u0065\u006e\u0074\u0041\u0063" +
-   "\u0074\u0069\u006f\u006e\u002e\u0063\u0072\u0065" +
-   "\u0061\u0074\u0065\u0000\u0000\u0000\u0000\u0000" +
-   "\u0008\u0000\u0000\u0000\u0003\u0000\u0004\u0000" +
-   "\u0000\u0000\u0000\u0000\u0001\u0000\u0000\u0000" +
-   "\u0000\u0000\u0001\u0000\u0007\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0029\u0000\u0000\u0000\u0032\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0024\u0000\u0000\u0000\u0003\u0000\u0001\u0000" +
-   "\u0030\u0000\u0000\u0000\u0002\u0000\u0001\u0000" +
-   "\u0001\u0000\u0000\u0000\u0002\u0000\u0000\u0000" +
-   "\u0000\u0000\u0001\u0000\u0008\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u002d\u0000\u0000\u0000\u005a\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u002c\u0000\u0000\u0000\u0003\u0000\u0001\u0000" +
-   "\u0048\u0000\u0000\u0000\u0002\u0000\u0001\u0000" +
-   "\u0076\u0061\u006c\u0075\u0065\u0000\u0000\u0000" +
-   "\r\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\r\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0072\u0065\u0066\u0065\u0072\u0065\u006e\u0063" +
-   "\u0065\u0073\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u000e\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0003\u0000\u0001\u0000" +
-   "\u0010\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u00ca\u0014\u00f9\u0021\u00e5\u0098\u00cb\u0093" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u000e\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" + "");
-public static final org.capnproto.SegmentReader b_d737bb5a167e8d1e =
-   org.capnproto.GeneratedClassSupport.decodeRawBytes(
-   "\u0000\u0000\u0000\u0000\u0005\u0000\u0006\u0000" +
-   "\u001e\u008d\u007e\u0016\u005a\u00bb\u0037\u00d7" +
-   "\u0025\u0000\u0000\u0000\u0001\u0000\u0001\u0000" +
-   "\u0038\u004b\u00c5\u00f3\u006d\u0097\u0006\u0098" +
-   "\u0004\u0000\u0007\u0000\u0001\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0015\u0000\u0000\u0000\u0052\u0001\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0021\u0000\u0000\u0000\u00af\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0063\u006c\u0069\u0065\u006e\u0074\u0074\u0072" +
-   "\u0061\u006e\u0073\u0061\u0063\u0074\u0069\u006f" +
-   "\u006e\u002e\u0063\u0061\u0070\u006e\u0070\u003a" +
-   "\u0043\u006c\u0069\u0065\u006e\u0074\u0041\u0063" +
-   "\u0074\u0069\u006f\u006e\u002e\u0072\u006f\u006c" +
-   "\u006c\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u000c\u0000\u0000\u0000\u0003\u0000\u0004\u0000" +
-   "\u0000\u0000\u0000\u0000\u0001\u0000\u0000\u0000" +
-   "\u0000\u0000\u0001\u0000\n\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0045\u0000\u0000\u0000\u0042\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0040\u0000\u0000\u0000\u0003\u0000\u0001\u0000" +
-   "\u004c\u0000\u0000\u0000\u0002\u0000\u0001\u0000" +
-   "\u0001\u0000\u0000\u0000\u0002\u0000\u0000\u0000" +
-   "\u0000\u0000\u0001\u0000\u000b\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0049\u0000\u0000\u0000\u0032\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0044\u0000\u0000\u0000\u0003\u0000\u0001\u0000" +
-   "\u0050\u0000\u0000\u0000\u0002\u0000\u0001\u0000" +
-   "\u0002\u0000\u0000\u0000\u0003\u0000\u0000\u0000" +
-   "\u0000\u0000\u0001\u0000\u000c\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u004d\u0000\u0000\u0000\u005a\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u004c\u0000\u0000\u0000\u0003\u0000\u0001\u0000" +
-   "\u0068\u0000\u0000\u0000\u0002\u0000\u0001\u0000" +
-   "\u0076\u0065\u0072\u0073\u0069\u006f\u006e\u0000" +
-   "\r\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\r\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0076\u0061\u006c\u0075\u0065\u0000\u0000\u0000" +
-   "\r\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\r\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0072\u0065\u0066\u0065\u0072\u0065\u006e\u0063" +
-   "\u0065\u0073\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u000e\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0003\u0000\u0001\u0000" +
-   "\u0010\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u00ca\u0014\u00f9\u0021\u00e5\u0098\u00cb\u0093" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u000e\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" + "");
+   "\u0077\u0072\u0069\u0074\u0065\u004f\u006e\u006c" +
+   "\u0079\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
+   "\u0072\u0065\u0061\u0064\u0057\u0072\u0069\u0074" +
+   "\u0065\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
+   "\u0064\u0065\u006c\u0065\u0074\u0065\u0000\u0000" +
+   "\u0072\u006f\u006c\u006c\u0000\u0000\u0000\u0000" + "");
 public static final org.capnproto.SegmentReader b_f110ed538577e4e1 =
    org.capnproto.GeneratedClassSupport.decodeRawBytes(
    "\u0000\u0000\u0000\u0000\u0005\u0000\u0006\u0000" +
@@ -1625,7 +939,7 @@ public static final org.capnproto.SegmentReader b_f110ed538577e4e1 =
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
    "\u0000\u0000\u0000\u0000\u0003\u0000\u0001\u0000" +
    "\u0010\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0084\u00fc\u003f\u0010\u00d2\u005b\u00bf\u00ef" +
+   "\u0038\u004b\u00c5\u00f3\u006d\u0097\u0006\u0098" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
    "\u000e\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
@@ -1637,61 +951,6 @@ public static final org.capnproto.SegmentReader b_f110ed538577e4e1 =
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
    "\u000c\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" + "");
-public static final org.capnproto.SegmentReader b_efbf5bd2103ffc84 =
-   org.capnproto.GeneratedClassSupport.decodeRawBytes(
-   "\u0000\u0000\u0000\u0000\u0005\u0000\u0006\u0000" +
-   "\u0084\u00fc\u003f\u0010\u00d2\u005b\u00bf\u00ef" +
-   "\u0018\u0000\u0000\u0000\u0001\u0000\u0000\u0000" +
-   "\u007b\u00a9\u0027\u005e\u0028\u008c\u00b0\u00ef" +
-   "\u0002\u0000\u0007\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0015\u0000\u0000\u0000\u002a\u0001\u0000\u0000" +
-   "\u0025\u0000\u0000\u0000\u0007\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0021\u0000\u0000\u0000\u0077\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0063\u006c\u0069\u0065\u006e\u0074\u0074\u0072" +
-   "\u0061\u006e\u0073\u0061\u0063\u0074\u0069\u006f" +
-   "\u006e\u002e\u0063\u0061\u0070\u006e\u0070\u003a" +
-   "\u0043\u006c\u0069\u0065\u006e\u0074\u0055\u0070" +
-   "\u0064\u0061\u0074\u0065\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0001\u0000\u0001\u0000" +
-   "\u0008\u0000\u0000\u0000\u0003\u0000\u0004\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0001\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0029\u0000\u0000\u0000\u0042\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0024\u0000\u0000\u0000\u0003\u0000\u0001\u0000" +
-   "\u0030\u0000\u0000\u0000\u0002\u0000\u0001\u0000" +
-   "\u0001\u0000\u0000\u0000\u0001\u0000\u0000\u0000" +
-   "\u0000\u0000\u0001\u0000\u0001\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u002d\u0000\u0000\u0000\u0042\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0028\u0000\u0000\u0000\u0003\u0000\u0001\u0000" +
-   "\u0044\u0000\u0000\u0000\u0002\u0000\u0001\u0000" +
-   "\u0076\u0065\u0072\u0073\u0069\u006f\u006e\u0000" +
-   "\r\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\r\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0061\u0063\u0074\u0069\u006f\u006e\u0073\u0000" +
-   "\u000e\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0003\u0000\u0001\u0000" +
-   "\u0010\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0038\u004b\u00c5\u00f3\u006d\u0097\u0006\u0098" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
-   "\u000e\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
    "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000" + "");
 public static final org.capnproto.SegmentReader b_93cb98e521f914ca =
