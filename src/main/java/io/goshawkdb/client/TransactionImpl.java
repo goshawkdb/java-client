@@ -3,6 +3,7 @@ package io.goshawkdb.client;
 import org.capnproto.Data;
 import org.capnproto.MessageBuilder;
 import org.capnproto.StructList;
+import org.capnproto.Void;
 
 import java.nio.ByteBuffer;
 import java.util.HashMap;
@@ -13,7 +14,10 @@ import java.util.Map;
 import io.goshawkdb.client.capnp.ConnectionCap;
 import io.goshawkdb.client.capnp.TransactionCap;
 
-import static io.goshawkdb.client.ConnectionFactory.VERSION_ZERO;
+import static io.goshawkdb.client.capnp.TransactionCap.ClientActionType.CREATE;
+import static io.goshawkdb.client.capnp.TransactionCap.ClientActionType.READ_ONLY;
+import static io.goshawkdb.client.capnp.TransactionCap.ClientActionType.READ_WRITE;
+import static io.goshawkdb.client.capnp.TransactionCap.ClientActionType.WRITE_ONLY;
 
 final class TransactionImpl<R> implements Transaction {
 
@@ -86,7 +90,8 @@ final class TransactionImpl<R> implements Transaction {
                 final TransactionCap.ClientAction.Builder action = actions.get(idx);
                 idx++;
                 action.setVarId(entry.getKey().id);
-                action.initRead().setVersion(entry.getValue().version.id);
+                action.setUnmodified(Void.VOID);
+                action.setActionType(TransactionCap.ClientActionType.READ_ONLY);
             }
             final TxnSubmissionResult result = conn.submitTransaction(msg, cTxn);
             if (result.outcome.which() != TransactionCap.ClientTxnOutcome.Which.ABORT) {
@@ -301,23 +306,25 @@ final class TransactionImpl<R> implements Transaction {
             idx++;
             action.setVarId(entry.getKey().id);
             final Effect e = entry.getValue();
+            boolean setMod = true;
             if (e.root == null) {
-                final TransactionCap.ClientAction.Create.Builder create = action.initCreate();
-                create.setValue(new Data.Reader(e.curValue, 0, e.curValue.limit()));
-                e.setupRefs(x -> create.initReferences(x));
+                action.setActionType(CREATE);
             } else if (e.origRead && e.origWritten) {
-                final TransactionCap.ClientAction.Readwrite.Builder readwrite = action.initReadwrite();
-                readwrite.setVersion(e.root.version.id);
-                readwrite.setValue(new Data.Reader(e.curValue, 0, e.curValue.limit()));
-                e.setupRefs(x -> readwrite.initReferences(x));
+                action.setActionType(READ_WRITE);
             } else if (e.origRead) {
-                action.initRead().setVersion(e.root.version.id);
+                action.setActionType(READ_ONLY);
+                setMod = false;
             } else if (e.origWritten) {
-                TransactionCap.ClientAction.Write.Builder write = action.initWrite();
-                write.setValue(new Data.Reader(e.curValue, 0, e.curValue.limit()));
-                e.setupRefs(x -> write.initReferences(x));
+                action.setActionType(WRITE_ONLY);
             } else {
                 throw new RuntimeException("Effect appears to be a noop! " + entry.getKey().toString());
+            }
+            if (setMod) {
+                final TransactionCap.ClientAction.Modified.Builder mod = action.initModified();
+                mod.setValue(new Data.Reader(e.curValue, 0, e.curValue.limit()));
+                e.setupRefs(x -> mod.initReferences(x));
+            } else {
+                action.setUnmodified(Void.VOID);
             }
         }
         final TxnSubmissionResult result = conn.submitTransaction(msg, cTxn);
@@ -357,7 +364,8 @@ final class TransactionImpl<R> implements Transaction {
         final StructList.Builder<TransactionCap.ClientAction.Builder> actions = cTxn.initActions(1);
         final TransactionCap.ClientAction.Builder action = actions.get(0);
         action.setVarId(vUUId.id);
-        action.initRead().setVersion(VERSION_ZERO.id);
+        action.setUnmodified(Void.VOID);
+        action.setActionType(READ_ONLY);
         final TxnSubmissionResult result = conn.submitTransaction(msg, cTxn);
         if (result.outcome.which() != TransactionCap.ClientTxnOutcome.Which.ABORT) {
             throw new RuntimeException("When loading, failed to get abort outcome!");
